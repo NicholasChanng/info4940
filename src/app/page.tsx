@@ -12,6 +12,7 @@ import type {
   ChatRequest,
   ChatResponse,
   UIChatMessage,
+  UserContext,
 } from "@/lib/types";
 
 const starterPrompts = [
@@ -42,6 +43,7 @@ export default function HomePage() {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [editedContext, setEditedContext] = useState<UserContext | null>(null);
   const [testModeEnabled, setTestModeEnabled] = useState(false);
   const [selectedFixtureId, setSelectedFixtureId] = useState(
     TEST_FIXTURES[0].id,
@@ -124,6 +126,7 @@ export default function HomePage() {
         startTransition(() => {
           setMessages([...nextMessages, assistantMessage]);
           setLatestResponse(fixture.response);
+          setEditedContext(null);
           setRequestError(null);
         });
         setIsLoading(false);
@@ -139,6 +142,7 @@ export default function HomePage() {
           content: message.content,
         })),
         currentSketchCode: latestResponse?.p5Code,
+        userContext: editedContext ?? undefined,
       };
 
       const response = await fetch("/api/chat", {
@@ -173,6 +177,7 @@ export default function HomePage() {
       startTransition(() => {
         setMessages([...nextMessages, assistantMessage]);
         setLatestResponse(chatResponse);
+        setEditedContext(null);
         setRequestError(null);
       });
 
@@ -266,6 +271,8 @@ export default function HomePage() {
             loading={isLoading}
             error={requestError}
             starterPrompts={starterPrompts}
+            editedContext={editedContext}
+            onContextEdit={setEditedContext}
             onSubmit={handleSubmit}
           />
           <SketchPreview code={deferredResponse?.p5Code ?? null} />

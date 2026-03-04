@@ -38,6 +38,8 @@ interface PromptInput {
   currentSketchCode?: string;
   matchedEmotions: string[];
   matchedPalette: PaletteEntry[];
+  userCorrectedEmotionTags?: string[];
+  userCorrectedVisualMetaphors?: string[];
 }
 
 interface RepairPromptInput extends PromptInput {
@@ -59,6 +61,24 @@ export function buildSketchPrompt(input: PromptInput): string {
       ? input.matchedEmotions.map((emotion) => `- ${emotion}`).join("\n")
       : "- No explicit emotion keywords matched.";
 
+  const userCorrectedTagsSection =
+    input.userCorrectedEmotionTags && input.userCorrectedEmotionTags.length > 0
+      ? [
+          "User-corrected emotion tags (prefer these over the matched hints above):",
+          input.userCorrectedEmotionTags.map((t) => `- ${t}`).join("\n"),
+          "",
+        ].join("\n")
+      : "";
+
+  const userCorrectedMetaphorsSection =
+    input.userCorrectedVisualMetaphors && input.userCorrectedVisualMetaphors.length > 0
+      ? [
+          "User-corrected visual metaphors (incorporate these directly in the sketch):",
+          input.userCorrectedVisualMetaphors.map((m) => `- ${m}`).join("\n"),
+          "",
+        ].join("\n")
+      : "";
+
   return [
     "Help the user express their life experience as a complete p5.js sketch.",
     "Keep the explanation concise and beginner-friendly.",
@@ -66,6 +86,7 @@ export function buildSketchPrompt(input: PromptInput): string {
     "Explanation must be 2 to 4 sentences.",
     "visualMetaphors must contain 2 to 4 short phrases.",
     "emotionTags must contain 1 to 6 lower-case emotion phrases.",
+    "followUpQuestion must be a single sentence asking the user something only they can answer — a sensory detail, emotional nuance, or preference that will shape the next sketch.",
     "",
     "p5.js generation rules:",
     p5Rules,
@@ -79,13 +100,17 @@ export function buildSketchPrompt(input: PromptInput): string {
     "Deterministic emotion color hints:",
     formatPaletteHints(input.matchedPalette),
     "",
+    userCorrectedTagsSection,
+    userCorrectedMetaphorsSection,
     "Conversation transcript:",
     formatTranscript(input.messages),
     "",
     currentSketchSection,
     "",
     "Build one complete replacement sketch that preserves the user's intent and incorporates the most recent request.",
-  ].join("\n");
+  ]
+    .filter((line) => line !== undefined)
+    .join("\n");
 }
 
 export function buildRepairPrompt(input: RepairPromptInput): string {

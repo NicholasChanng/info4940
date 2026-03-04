@@ -66,6 +66,7 @@ export async function POST(request: Request) {
   }
 
   const emotionContext = deriveEmotionContext(recentMessages);
+  const userContext = parsedRequest.data.userContext;
 
   try {
     let draft = await generateSketchDraft({
@@ -73,6 +74,8 @@ export async function POST(request: Request) {
       currentSketchCode: parsedRequest.data.currentSketchCode,
       matchedEmotions: emotionContext.matchedEmotions,
       matchedPalette: emotionContext.palette,
+      userCorrectedEmotionTags: userContext?.emotionTags,
+      userCorrectedVisualMetaphors: userContext?.visualMetaphors,
     });
 
     let validationResult = validateSketchCode(draft.p5Code);
@@ -85,6 +88,8 @@ export async function POST(request: Request) {
         currentSketchCode: parsedRequest.data.currentSketchCode,
         matchedEmotions: emotionContext.matchedEmotions,
         matchedPalette: emotionContext.palette,
+        userCorrectedEmotionTags: userContext?.emotionTags,
+        userCorrectedVisualMetaphors: userContext?.visualMetaphors,
         invalidResponse: JSON.stringify(draft, null, 2),
         validationErrors: validationResult.errors,
       });
@@ -108,6 +113,7 @@ export async function POST(request: Request) {
       colorPalette: resolvePaletteForEmotionTags(emotionTags, emotionContext.palette),
       p5Code: draft.p5Code,
       repairApplied,
+      followUpQuestion: draft.followUpQuestion,
     };
 
     return NextResponse.json(responseBody);

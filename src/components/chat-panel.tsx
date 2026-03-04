@@ -3,23 +3,102 @@
 import { useState } from "react";
 
 import { PromptChips } from "@/components/prompt-chips";
-import type { UIChatMessage } from "@/lib/types";
+import type { UIChatMessage, UserContext } from "@/lib/types";
 
 interface ChatPanelProps {
   messages: UIChatMessage[];
   loading: boolean;
   error: string | null;
   starterPrompts: string[];
+  editedContext: UserContext | null;
+  onContextEdit: (update: UserContext) => void;
   onSubmit: (value: string) => Promise<boolean>;
 }
 
 const MAX_PROMPT_LENGTH = 600;
+
+// Inline chip list with add/remove editing
+function EditableChipList({
+  items,
+  onRemove,
+  onAdd,
+  chipClassName,
+  inputPlaceholder,
+}: {
+  items: string[];
+  onRemove: (index: number) => void;
+  onAdd: (value: string) => void;
+  chipClassName: string;
+  inputPlaceholder: string;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+
+  function commit() {
+    const trimmed = inputValue.trim();
+    if (trimmed) onAdd(trimmed);
+    setInputValue("");
+    setAdding(false);
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item, i) => (
+        <span
+          key={`${item}-${i}`}
+          className={`inline-flex items-center gap-1 ${chipClassName}`}
+        >
+          {item}
+          <button
+            type="button"
+            onClick={() => onRemove(i)}
+            aria-label={`Remove ${item}`}
+            className="ml-0.5 rounded-full opacity-50 transition hover:opacity-100 focus:opacity-100"
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      {adding ? (
+        <input
+          // eslint-disable-next-line jsx-a11y/no-autofocus
+          autoFocus
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            }
+            if (e.key === "Escape") {
+              setAdding(false);
+              setInputValue("");
+            }
+          }}
+          onBlur={commit}
+          placeholder={inputPlaceholder}
+          className="w-28 rounded-full border border-dashed border-[color:var(--accent)] bg-white px-3 py-1 text-xs text-[color:var(--ink)] outline-none"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="rounded-full border border-dashed border-[color:var(--line)] px-3 py-1 text-xs text-[color:var(--muted)] transition hover:border-[color:var(--ink)] hover:text-[color:var(--ink)]"
+        >
+          + add
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function ChatPanel({
   messages,
   loading,
   error,
   starterPrompts,
+  editedContext,
+  onContextEdit,
   onSubmit,
 }: ChatPanelProps) {
   const [draft, setDraft] = useState("");
@@ -28,6 +107,15 @@ export function ChatPanel({
   const trimmedDraft = draft.trim();
   const characterCount = draft.length;
   const isOverLimit = characterCount > MAX_PROMPT_LENGTH;
+
+  // Only the last assistant message is editable
+  let lastAssistantMessageId: string | null = null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "assistant") {
+      lastAssistantMessageId = messages[i].id;
+      break;
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,60 +164,152 @@ export function ChatPanel({
             feeling at peace. Follow-up prompts can refine the current sketch.
           </div>
         ) : (
-          messages.map((message) => (
-            <article
-              key={message.id}
-              className={`rounded-[24px] border px-4 py-4 ${
-                message.role === "user"
-                  ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)]"
-                  : "border-[color:var(--line)] bg-white/85"
-              }`}
-            >
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                {message.role === "user" ? "You" : "AI Coach"}
-              </p>
-              <p className="text-sm leading-6 text-[color:var(--ink)]">{message.content}</p>
-              {message.assistantPayload ? (
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                      Visual Metaphors
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {message.assistantPayload.visualMetaphors.map((metaphor) => (
-                        <span
-                          key={metaphor}
-                          className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-medium text-[color:var(--ink)]"
-                        >
-                          {metaphor}
-                        </span>
-                      ))}
+          messages.map((message) => {
+            const isLatestAssistant = message.id === lastAssistantMessageId;
+            const payload = message.assistantPayload;
+
+            // For the latest assistant message, use editedContext overrides if present
+            const displayedTags = isLatestAssistant
+              ? (editedContext?.emotionTags ?? payload?.emotionTags ?? [])
+              : payload?.emotionTags ?? [];
+            const displayedMetaphors = isLatestAssistant
+              ? (editedContext?.visualMetaphors ?? payload?.visualMetaphors ?? [])
+              : payload?.visualMetaphors ?? [];
+
+            function handleTagRemove(index: number) {
+              onContextEdit({
+                emotionTags: displayedTags.filter((_, i) => i !== index),
+                visualMetaphors: editedContext?.visualMetaphors ?? payload?.visualMetaphors ?? [],
+              });
+            }
+            function handleTagAdd(value: string) {
+              onContextEdit({
+                emotionTags: [...displayedTags, value.toLowerCase()],
+                visualMetaphors: editedContext?.visualMetaphors ?? payload?.visualMetaphors ?? [],
+              });
+            }
+            function handleMetaphorRemove(index: number) {
+              onContextEdit({
+                emotionTags: editedContext?.emotionTags ?? payload?.emotionTags ?? [],
+                visualMetaphors: displayedMetaphors.filter((_, i) => i !== index),
+              });
+            }
+            function handleMetaphorAdd(value: string) {
+              onContextEdit({
+                emotionTags: editedContext?.emotionTags ?? payload?.emotionTags ?? [],
+                visualMetaphors: [...displayedMetaphors, value],
+              });
+            }
+
+            return (
+              <article
+                key={message.id}
+                className={`rounded-[24px] border px-4 py-4 ${
+                  message.role === "user"
+                    ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)]"
+                    : "border-[color:var(--line)] bg-white/85"
+                }`}
+              >
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+                  {message.role === "user" ? "You" : "AI Coach"}
+                </p>
+                <p className="text-sm leading-6 text-[color:var(--ink)]">{message.content}</p>
+
+                {payload ? (
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <div className="mb-2 flex items-center gap-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                          Visual Metaphors
+                        </p>
+                        {isLatestAssistant && (
+                          <span className="rounded-full bg-[color:var(--accent-soft)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--muted)]">
+                            editable
+                          </span>
+                        )}
+                      </div>
+                      {isLatestAssistant ? (
+                        <EditableChipList
+                          items={displayedMetaphors}
+                          onRemove={handleMetaphorRemove}
+                          onAdd={handleMetaphorAdd}
+                          chipClassName="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-medium text-[color:var(--ink)]"
+                          inputPlaceholder="new metaphor"
+                        />
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {displayedMetaphors.map((metaphor) => (
+                            <span
+                              key={metaphor}
+                              className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-medium text-[color:var(--ink)]"
+                            >
+                              {metaphor}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                      Detected Emotions
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {message.assistantPayload.emotionTags.map((emotion) => (
-                        <span
-                          key={emotion}
-                          className="rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--ink)]"
-                        >
-                          {emotion}
-                        </span>
-                      ))}
+
+                    <div>
+                      <div className="mb-2 flex items-center gap-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                          Detected Emotions
+                        </p>
+                        {isLatestAssistant && (
+                          <span className="rounded-full bg-[color:var(--accent-soft)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--muted)]">
+                            editable
+                          </span>
+                        )}
+                      </div>
+                      {isLatestAssistant ? (
+                        <EditableChipList
+                          items={displayedTags}
+                          onRemove={handleTagRemove}
+                          onAdd={handleTagAdd}
+                          chipClassName="rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--ink)]"
+                          inputPlaceholder="new emotion"
+                        />
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {displayedTags.map((emotion) => (
+                            <span
+                              key={emotion}
+                              className="rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--ink)]"
+                            >
+                              {emotion}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
+
+                    {isLatestAssistant && editedContext && (
+                      <p className="text-xs font-medium text-[color:var(--accent)]">
+                        Your corrections will shape the next sketch.
+                      </p>
+                    )}
+
+                    {payload.followUpQuestion && (
+                      <div className="rounded-[16px] border border-[color:var(--accent)] bg-[color:var(--accent-soft)] px-4 py-3">
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+                          Coach asks
+                        </p>
+                        <p className="text-sm leading-6 text-[color:var(--ink)]">
+                          {payload.followUpQuestion}
+                        </p>
+                      </div>
+                    )}
+
+                    {payload.repairApplied ? (
+                      <p className="text-xs font-medium text-[color:var(--warning)]">
+                        The sketch needed one automatic repair pass before rendering.
+                      </p>
+                    ) : null}
                   </div>
-                  {message.assistantPayload.repairApplied ? (
-                    <p className="text-xs font-medium text-[color:var(--warning)]">
-                      The sketch needed one automatic repair pass before rendering.
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-            </article>
-          ))
+                ) : null}
+              </article>
+            );
+          })
         )}
       </div>
 

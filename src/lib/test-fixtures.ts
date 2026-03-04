@@ -55,6 +55,8 @@ function draw() {
   }
 }`,
       repairApplied: false,
+      followUpQuestion:
+        "What moment during that experience felt the most alive — was there a specific sound, color, or sensation that stood out?",
     },
   },
   {
@@ -94,6 +96,8 @@ function draw() {
   rect(width - x, height - y, 28, 28);
 }`,
       repairApplied: false,
+      followUpQuestion:
+        "Was there something in the room that seemed to move differently from everything else, or did everything feel equally distant?",
     },
   },
   {
@@ -122,6 +126,8 @@ function draw() {
   ellipse(width / 2, height / 2, radius, radius);
 }`,
       repairApplied: false,
+      followUpQuestion:
+        "When that calmness finally arrived, did it feel more like slowing down inside, or like the world outside suddenly going quiet?",
     },
   },
   {

@@ -11,6 +11,12 @@ export const chatMessageSchema: z.ZodType<ChatMessage> = z.object({
 export const chatRequestSchema = z.object({
   messages: z.array(chatMessageSchema).min(1).max(20),
   currentSketchCode: z.string().max(40000).optional(),
+  userContext: z
+    .object({
+      emotionTags: z.array(z.string().min(1).max(40)).max(6).optional(),
+      visualMetaphors: z.array(z.string().min(1).max(120)).max(4).optional(),
+    })
+    .optional(),
 });
 
 export const modelSketchResponseSchema: z.ZodType<ModelSketchResponse> = z
@@ -19,13 +25,14 @@ export const modelSketchResponseSchema: z.ZodType<ModelSketchResponse> = z
     visualMetaphors: z.array(z.string().min(1).max(120)).min(2).max(4),
     emotionTags: z.array(z.string().min(1).max(40)).min(1).max(6),
     p5Code: z.string().min(1).max(20000),
+    followUpQuestion: z.string().min(1).max(300),
   })
   .strict();
 
 export const modelSketchResponseJsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["explanation", "visualMetaphors", "emotionTags", "p5Code"],
+  required: ["explanation", "visualMetaphors", "emotionTags", "p5Code", "followUpQuestion"],
   properties: {
     explanation: {
       type: "string",
@@ -52,6 +59,11 @@ export const modelSketchResponseJsonSchema = {
     p5Code: {
       type: "string",
       description: "A complete self-contained p5.js sketch in plain JavaScript.",
+    },
+    followUpQuestion: {
+      type: "string",
+      description:
+        "A single question asking the user something only they can answer — a sensory detail, an emotional nuance, or a directional preference that will shape the next sketch.",
     },
   },
 } as const;

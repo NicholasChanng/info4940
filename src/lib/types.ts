@@ -18,6 +18,7 @@ export interface ChatResponse {
   colorPalette: PaletteEntry[];
   p5Code: string;
   repairApplied: boolean;
+  followUpQuestion: string;
 }
 
 export interface ModelSketchResponse {
@@ -25,6 +26,7 @@ export interface ModelSketchResponse {
   visualMetaphors: string[];
   emotionTags: string[];
   p5Code: string;
+  followUpQuestion: string;
 }
 
 export interface SketchValidationResult {
@@ -40,9 +42,15 @@ export interface UIChatMessage extends ChatMessage {
   assistantPayload?: ChatResponse;
 }
 
+export interface UserContext {
+  emotionTags?: string[];
+  visualMetaphors?: string[];
+}
+
 export interface ChatRequest {
   messages: ChatMessage[];
   currentSketchCode?: string;
+  userContext?: UserContext;
 }
 
 export interface PreviewMessagePayload {
