@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  --bg-cream: #f5efe2;
+  --bg-mint: #dbe7df;
+  --bg-sage: #b6c8bf;
+  --card: rgba(255, 252, 247, 0.74);
+  --card-strong: rgba(255, 252, 247, 0.9);
+  --ink: #122229;
+  --muted: #536067;
+  --line: rgba(18, 34, 41, 0.11);
+  --accent: #1f7a69;
+  --accent-soft: #d7efe6;
+  --warning: #8e4b29;
+  --display-font: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --body-font: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  --mono-font: "IBM Plex Mono", "SFMono-Regular", Consolas, Monaco, monospace;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(255, 245, 196, 0.7), transparent 28%),
+    radial-gradient(circle at top right, rgba(123, 223, 242, 0.24), transparent 25%),
+    linear-gradient(180deg, var(--bg-cream), var(--bg-mint) 55%, #edf3ef 100%);
+  color: var(--ink);
+  font-family: var(--body-font);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--display-font);
+}
+
+pre,
+code {
+  font-family: var(--mono-font);
+}
+
+::selection {
+  background: rgba(31, 122, 105, 0.22);
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(18, 34, 41, 0.14);
+  border-radius: 999px;
+}

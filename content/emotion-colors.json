@@ -1,0 +1,12 @@
+[
+  { "emotion": "lonely", "hex": "#5C6B73" },
+  { "emotion": "outsider", "hex": "#6D7B8D" },
+  { "emotion": "happy", "hex": "#FFD166" },
+  { "emotion": "elation", "hex": "#FDB813" },
+  { "emotion": "love", "hex": "#EF476F" },
+  { "emotion": "calm", "hex": "#7BDFF2" },
+  { "emotion": "grief", "hex": "#4B4E6D" },
+  { "emotion": "anxious", "hex": "#8D99AE" },
+  { "emotion": "hopeful", "hex": "#90BE6D" },
+  { "emotion": "anger", "hex": "#D62828" }
+]
