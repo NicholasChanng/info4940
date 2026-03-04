@@ -5,6 +5,7 @@ import { startTransition, useDeferredValue, useState } from "react";
 import { ChatPanel } from "@/components/chat-panel";
 import { CodePanel } from "@/components/code-panel";
 import { SketchPreview } from "@/components/sketch-preview";
+import { TEST_FIXTURES } from "@/lib/test-fixtures";
 import type {
   ApiErrorResponse,
   ChatMessage,
@@ -41,8 +42,49 @@ export default function HomePage() {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [testModeEnabled, setTestModeEnabled] = useState(false);
+  const [selectedFixtureId, setSelectedFixtureId] = useState(
+    TEST_FIXTURES[0].id,
+  );
 
   const deferredResponse = useDeferredValue(latestResponse);
+
+  function applyFixture(fixtureId: string, userLabel: string) {
+    const fixture = TEST_FIXTURES.find((f) => f.id === fixtureId);
+    if (!fixture) return;
+
+    const userMessage: UIChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: userLabel,
+    };
+
+    if (fixture.type === "error") {
+      setMessages((prev) => [...prev, userMessage]);
+      setLatestResponse(null);
+      setRequestError(fixture.message);
+      return;
+    }
+
+    const assistantMessage: UIChatMessage = {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: buildAssistantTranscriptContent(fixture.response),
+      assistantPayload: fixture.response,
+    };
+
+    startTransition(() => {
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      setLatestResponse(fixture.response);
+      setRequestError(null);
+    });
+  }
+
+  function handleInject() {
+    const fixture = TEST_FIXTURES.find((f) => f.id === selectedFixtureId);
+    if (!fixture) return;
+    applyFixture(selectedFixtureId, `[Test] ${fixture.label}`);
+  }
 
   async function handleSubmit(value: string): Promise<boolean> {
     const trimmedValue = value.trim();
@@ -62,6 +104,32 @@ export default function HomePage() {
     setMessages(nextMessages);
     setIsLoading(true);
     setRequestError(null);
+
+    if (testModeEnabled) {
+      const fixture = TEST_FIXTURES.find((f) => f.id === selectedFixtureId);
+      if (fixture) {
+        // Small delay to mimic network latency so the loading state is visible
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        if (fixture.type === "error") {
+          setRequestError(fixture.message);
+          setIsLoading(false);
+          return false;
+        }
+        const assistantMessage: UIChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: buildAssistantTranscriptContent(fixture.response),
+          assistantPayload: fixture.response,
+        };
+        startTransition(() => {
+          setMessages([...nextMessages, assistantMessage]);
+          setLatestResponse(fixture.response);
+          setRequestError(null);
+        });
+        setIsLoading(false);
+        return true;
+      }
+    }
 
     try {
       const requestBody: ChatRequest = {
@@ -132,20 +200,65 @@ export default function HomePage() {
 
       <div className="relative mx-auto max-w-7xl space-y-6">
         <header className="rounded-[32px] border border-white/55 bg-white/55 px-6 py-6 shadow-[0_18px_72px_rgba(18,34,41,0.09)] backdrop-blur">
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[color:var(--muted)]">
-              Bare-bones MVP
-            </p>
-            <h1 className="text-4xl leading-tight sm:text-5xl">
-              Turn a life experience into a living sketch.
-            </h1>
-            <p className="max-w-5xl text-sm leading-7 text-[color:var(--muted)] sm:text-base">
-              Describe a personal moment, let Gemini translate it into visual
-              metaphors, and watch the sketch update in a live sandbox. The code
-              stays visible so a beginner can learn from every iteration.
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[color:var(--muted)]">
+                Bare-bones MVP
+              </p>
+              <h1 className="text-4xl leading-tight sm:text-5xl">
+                Turn a life experience into a living sketch.
+              </h1>
+              <p className="max-w-5xl text-sm leading-7 text-[color:var(--muted)] sm:text-base">
+                Describe a personal moment, let Gemini translate it into visual
+                metaphors, and watch the sketch update in a live sandbox. The code
+                stays visible so a beginner can learn from every iteration.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTestModeEnabled((v) => !v)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                testModeEnabled
+                  ? "bg-amber-400 text-amber-900 hover:bg-amber-300"
+                  : "border border-[color:var(--line)] bg-white/60 text-[color:var(--muted)] hover:bg-white"
+              }`}
+            >
+              {testModeEnabled ? "Test Mode ON" : "Test Mode"}
+            </button>
           </div>
         </header>
+
+        {testModeEnabled && (
+          <div className="rounded-[24px] border border-amber-300 bg-amber-50/80 px-5 py-4 shadow-sm backdrop-blur">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                Dev Testing
+              </span>
+              <select
+                value={selectedFixtureId}
+                onChange={(e) => setSelectedFixtureId(e.target.value)}
+                className="flex-1 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-sm text-[color:var(--ink)] outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                {TEST_FIXTURES.map((fixture) => (
+                  <option key={fixture.id} value={fixture.id}>
+                    {fixture.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleInject}
+                className="rounded-full bg-amber-400 px-4 py-1.5 text-xs font-semibold text-amber-900 transition hover:bg-amber-300"
+              >
+                Inject response
+              </button>
+              <p className="w-full text-xs text-amber-700">
+                {TEST_FIXTURES.find((f) => f.id === selectedFixtureId)?.description}
+                {" · "}Submitting a message also uses the selected fixture.
+              </p>
+            </div>
+          </div>
+        )}
 
         <section className="grid gap-6 lg:grid-cols-2 lg:items-start">
           <ChatPanel
