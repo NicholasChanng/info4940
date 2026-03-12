@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { PromptChips } from "@/components/prompt-chips";
+import { detectInterventionTriggers, generateInterventionResponse, shouldIntervene } from "@/lib/communication-protocol/intervention-detector";
 import type { UIChatMessage, UserContext } from "@/lib/types";
 
 interface ChatPanelProps {
@@ -103,6 +104,7 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const [draft, setDraft] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  const [interventionMessage, setInterventionMessage] = useState<string | null>(null);
 
   const trimmedDraft = draft.trim();
   const characterCount = draft.length;
@@ -130,7 +132,16 @@ export function ChatPanel({
       return;
     }
 
+    // Check for communication issues before submitting
+    const triggers = detectInterventionTriggers(trimmedDraft);
+    if (shouldIntervene(triggers, trimmedDraft)) {
+      const intervention = generateInterventionResponse(triggers[0], trimmedDraft);
+      setInterventionMessage(intervention.message);
+      return;
+    }
+
     setLocalError(null);
+    setInterventionMessage(null);
     const submittedDraft = trimmedDraft;
     const succeeded = await onSubmit(submittedDraft);
 
@@ -139,7 +150,7 @@ export function ChatPanel({
     }
   }
 
-  const visibleError = localError ?? error;
+  const visibleError = localError ?? error ?? interventionMessage;
 
   return (
     <section className="relative isolate flex min-h-[680px] flex-col rounded-[28px] border border-white/55 bg-[color:var(--card)] p-5 shadow-[0_24px_80px_rgba(18,34,41,0.12)] backdrop-blur lg:h-[820px] lg:min-h-0">
@@ -158,6 +169,119 @@ export function ChatPanel({
       </div>
 
       <div className="relative z-0 mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+        {/* Intervention message display */}
+        {interventionMessage && (
+          <div className="rounded-[24px] border border-[color:var(--accent)] bg-[color:var(--accent-soft)] px-4 py-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+              AI Coach
+            </p>
+            <p className="text-sm leading-6 text-[color:var(--ink)]">{interventionMessage}</p>
+            <p className="mt-2 text-xs text-[color:var(--muted)]">
+              What do you mean by that? Please be more specific and concrete.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {interventionMessage.includes("heavier") && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - I meant slower movement and pacing");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Slower movement and pacing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - I meant darker colors and tones");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Darker colors and tones
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - I meant denser visual elements");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Denser visual elements
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - I meant more weight in the composition");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    More weight in the composition
+                  </button>
+                </>
+              )}
+              {interventionMessage.includes("multiple emotions") && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - The dominant emotion should be loneliness");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Loneliness
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - The dominant emotion should be hope");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Hope
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - The dominant emotion should be anxiety");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Anxiety
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - The dominant emotion should be calm");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Calm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - The dominant emotion should be excitement");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Excitement
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {messages.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-[color:var(--line)] bg-white/55 p-5 text-sm leading-6 text-[color:var(--muted)]">
             Start with a personal moment, like feeling lonely in a crowd or finally
