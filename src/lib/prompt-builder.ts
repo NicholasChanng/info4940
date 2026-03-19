@@ -10,7 +10,10 @@ const systemRole = readFileSync(
   "utf8",
 ).trim();
 
-const p5Rules = readFileSync(path.join(contentDirectory, "p5-rules.md"), "utf8").trim();
+const p5Rules = readFileSync(
+  path.join(contentDirectory, "p5-rules.md"),
+  "utf8",
+).trim();
 
 const visualMetaphors = readFileSync(
   path.join(contentDirectory, "visual-metaphors.md"),
@@ -65,7 +68,7 @@ export function buildSketchPrompt(input: PromptInput): string {
     input.userCorrectedEmotionTags && input.userCorrectedEmotionTags.length > 0
       ? [
           "User-corrected emotion tags (prefer these over the matched hints above):",
-          input.userCorrectedEmotionTags.map((t) => `- ${t}`).join("\n"),
+          input.userCorrectedEmotionTags.map((tag) => `- ${tag}`).join("\n"),
           "",
         ].join("\n")
       : "";
@@ -73,8 +76,8 @@ export function buildSketchPrompt(input: PromptInput): string {
   const userCorrectedMetaphorsSection =
     input.userCorrectedVisualMetaphors && input.userCorrectedVisualMetaphors.length > 0
       ? [
-          "User-corrected visual metaphors (incorporate these directly in the sketch; these take priority over the emotion color hints above — if a metaphor specifies a background quality such as 'bright background' or 'dark background', use it even if it conflicts with the palette):",
-          input.userCorrectedVisualMetaphors.map((m) => `- ${m}`).join("\n"),
+          "User-corrected visual metaphors (incorporate these directly in the sketch; these take priority over the emotion color hints above. If a metaphor specifies a background quality such as 'bright background' or 'dark background', follow that metaphor even if it conflicts with the suggested palette):",
+          input.userCorrectedVisualMetaphors.map((metaphor) => `- ${metaphor}`).join("\n"),
           "",
         ].join("\n")
       : "";
@@ -87,6 +90,16 @@ export function buildSketchPrompt(input: PromptInput): string {
     "visualMetaphors must contain 2 to 4 short phrases.",
     "emotionTags must contain 1 to 6 lower-case emotion phrases.",
     "followUpQuestion must be a single sentence asking the user something only they can answer — a sensory detail, emotional nuance, or preference that will shape the next sketch.",
+    "If the user expresses multiple emotions, do not collapse them into a single feeling.",
+    "Represent mixed emotions explicitly in emotionTags, explanation, and visualMetaphors.",
+    "If the emotions create ambiguity, conflict, or tension, acknowledge that tension instead of forcing a simplified interpretation.",
+    "Use the followUpQuestion to clarify uncertainty only when the emotional balance, sensory detail, or visual priority is still unclear.",
+    "Do not misread relational emotions. For example, being proud of a friend is different from feeling proud of yourself.",
+    "Preserve the user's intended social context, target, and perspective when interpreting emotions.",
+    "Make all important visual elements clearly distinguishable from the background using contrast in color, brightness, scale, motion, spacing, layering, or outline.",
+    "If you describe visible effects such as rain, trails, glow, vibration, shadows, or pulses, the sketch must render them in a clearly perceptible way.",
+    "Avoid using background and foreground colors that are too similar when the user expects an element to stand out.",
+    "Prefer simple, stable, high-clarity visuals over fragile or barely visible effects.",
     "",
     "p5.js generation rules:",
     p5Rules,
@@ -108,8 +121,9 @@ export function buildSketchPrompt(input: PromptInput): string {
     currentSketchSection,
     "",
     "Build one complete replacement sketch that preserves the user's intent and incorporates the most recent request.",
+    "The sketch should feel coherent, emotionally faithful, and visually legible at a glance.",
   ]
-    .filter((line) => line !== undefined)
+    .filter((line) => line !== undefined && line !== "")
     .join("\n");
 }
 
@@ -118,6 +132,9 @@ export function buildRepairPrompt(input: RepairPromptInput): string {
     "The previous response did not produce a valid p5.js sketch.",
     "Return corrected JSON only that matches the provided response schema.",
     "Keep the original creative intent and stay beginner-friendly.",
+    "Preserve all clearly stated user emotions, corrections, and preferences.",
+    "If the earlier attempt failed because the description was too abstract, conflicting, or visually unclear, simplify the composition while preserving the intended emotional meaning.",
+    "Make visually important elements more legible and distinct if visibility may have contributed to the failure.",
     "",
     "Validation errors:",
     input.validationErrors.map((error) => `- ${error}`).join("\n"),
