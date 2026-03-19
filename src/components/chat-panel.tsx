@@ -1,6 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const LOADING_STAGES = [
+  "Reading your experience…",
+  "Identifying the emotional core…",
+  "Selecting visual metaphors…",
+  "Writing sketch code…",
+];
 
 import { PromptChips } from "@/components/prompt-chips";
 import { detectInterventionTriggers, generateInterventionResponse, shouldIntervene } from "@/lib/communication-protocol/intervention-detector";
@@ -10,11 +17,38 @@ interface ChatPanelProps {
   messages: UIChatMessage[];
   loading: boolean;
   error: string | null;
+  runtimeError: string | null;
   starterPrompts: string[];
   editedContext: UserContext | null;
   onContextEdit: (update: UserContext) => void;
   onSubmit: (value: string) => Promise<boolean>;
   onReset: () => void;
+}
+
+function humanizeRuntimeError(message: string): { summary: string; tip: string } {
+  if (message.includes("is not defined")) {
+    const name = message.match(/(\w+) is not defined/)?.[1] ?? "Something";
+    return {
+      summary: `The sketch tried to use "${name}" but that variable or function doesn't exist in this context.`,
+      tip: "Try describing the effect differently — the AI may have used a feature that p5.js doesn't support here.",
+    };
+  }
+  if (message.includes("Cannot read propert") || message.includes("Cannot set propert") || message.includes("null")) {
+    return {
+      summary: "The sketch tried to access part of an object that didn't exist yet.",
+      tip: "Send a follow-up to simplify the sketch, or ask for fewer simultaneous effects.",
+    };
+  }
+  if (message.includes("is not a function")) {
+    return {
+      summary: "The sketch called something as a function that isn't one.",
+      tip: "Try rephrasing your request — this usually means the generated code has a typo or unsupported feature.",
+    };
+  }
+  return {
+    summary: "The sketch ran into an unexpected error while rendering.",
+    tip: 'Try sending a follow-up message like "simplify the sketch" to get a more stable version.',
+  };
 }
 
 const MAX_PROMPT_LENGTH = 600;
@@ -98,6 +132,7 @@ export function ChatPanel({
   messages,
   loading,
   error,
+  runtimeError,
   starterPrompts,
   editedContext,
   onContextEdit,
@@ -107,6 +142,18 @@ export function ChatPanel({
   const [draft, setDraft] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const [interventionMessage, setInterventionMessage] = useState<string | null>(null);
+  const [loadingStageIndex, setLoadingStageIndex] = useState(0);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingStageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingStageIndex((i) => Math.min(i + 1, LOADING_STAGES.length - 1));
+    }, 2200);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const trimmedDraft = draft.trim();
   const characterCount = draft.length;
@@ -295,6 +342,40 @@ export function ChatPanel({
           </div>
         )}
 
+        <div className="rounded-[24px] border border-[color:var(--line)] bg-white/70 px-5 py-4 space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+            How this works
+          </p>
+          <div className="grid grid-cols-2 gap-3 text-xs leading-5">
+            <div>
+              <p className="font-semibold text-[color:var(--ink)] mb-1">Your role</p>
+              <ul className="space-y-1 text-[color:var(--muted)]">
+                <li>— Describe the experience in your own words</li>
+                <li>— Correct the emotion tags or metaphors if they feel wrong</li>
+                <li>— Answer the coach's follow-up to steer the next sketch</li>
+                <li>— Send follow-ups to refine, not replace, the sketch</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold text-[color:var(--ink)] mb-1">AI Coach role</p>
+              <ul className="space-y-1 text-[color:var(--muted)]">
+                <li>— Interpret your words into visual metaphors</li>
+                <li>— Generate and repair p5.js code</li>
+                <li>— Explain its key interpretive choices</li>
+                <li>— Ask one question per turn to reduce guessing</li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-[color:var(--line)] pt-3">
+            <p className="text-xs font-semibold text-[color:var(--muted)] mb-1">AI limitations</p>
+            <p className="text-xs leading-5 text-[color:var(--muted)]">
+              The AI only sees what you type — it has no memory of previous sessions and cannot view your screen.
+              It reads at most the last 6 messages. Ambiguous or conflicting input may produce an unexpected sketch;
+              use the editable tags to correct it rather than starting over.
+            </p>
+          </div>
+        </div>
+
         {messages.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-[color:var(--line)] bg-white/55 p-5 text-sm leading-6 text-[color:var(--muted)]">
             Start with a personal moment, like feeling lonely in a crowd or finally
@@ -426,6 +507,17 @@ export function ChatPanel({
                       </p>
                     )}
 
+                    {payload.interpretationNote && (
+                      <div className="rounded-[16px] border border-[color:var(--line)] bg-white/60 px-4 py-3">
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+                          How I read this
+                        </p>
+                        <p className="text-sm leading-6 text-[color:var(--ink)]">
+                          {payload.interpretationNote}
+                        </p>
+                      </div>
+                    )}
+
                     {payload.followUpQuestion && (
                       <div className="rounded-[16px] border border-[color:var(--accent)] bg-[color:var(--accent-soft)] px-4 py-3">
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
@@ -448,6 +540,34 @@ export function ChatPanel({
             );
           })
         )}
+
+        {loading && (
+          <div className="rounded-[24px] border border-[color:var(--line)] bg-white/85 px-4 py-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+              AI Coach
+            </p>
+            <div className="flex items-center gap-3">
+              <svg className="h-4 w-4 shrink-0 animate-spin text-[color:var(--muted)]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <p className="text-sm text-[color:var(--muted)]">{LOADING_STAGES[loadingStageIndex]}</p>
+            </div>
+          </div>
+        )}
+
+        {runtimeError && (() => {
+          const { summary, tip } = humanizeRuntimeError(runtimeError);
+          return (
+            <div className="rounded-[24px] border border-orange-300 bg-orange-50 px-4 py-4">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-orange-600">
+                Canvas error
+              </p>
+              <p className="text-sm leading-6 text-[color:var(--ink)]">{summary}</p>
+              <p className="mt-1 text-xs text-[color:var(--muted)]">{tip}</p>
+            </div>
+          );
+        })()}
       </div>
 
       <form onSubmit={handleSubmit} className="relative z-10 mt-4 space-y-3 border-t border-[color:var(--line)] pt-4">
@@ -496,7 +616,7 @@ export function ChatPanel({
               />
             </svg>
           )}
-          {loading ? "Generating…" : "Generate sketch"}
+          {loading ? LOADING_STAGES[loadingStageIndex] : "Generate sketch"}
         </button>
       </form>
     </section>

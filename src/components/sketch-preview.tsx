@@ -7,9 +7,10 @@ import type { PreviewMessagePayload } from "@/lib/types";
 
 interface SketchPreviewProps {
   code: string | null;
+  onRuntimeError?: (message: string) => void;
 }
 
-export function SketchPreview({ code }: SketchPreviewProps) {
+export function SketchPreview({ code, onRuntimeError }: SketchPreviewProps) {
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,6 +25,7 @@ export function SketchPreview({ code }: SketchPreviewProps) {
 
       if (event.data.type === "runtime-error") {
         setRuntimeError(event.data.message);
+        onRuntimeError?.(event.data.message);
       }
     }
 

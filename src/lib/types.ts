@@ -19,6 +19,7 @@ export interface ChatResponse {
   p5Code: string;
   repairApplied: boolean;
   followUpQuestion: string;
+  interpretationNote: string;
 }
 
 export interface ModelSketchResponse {
@@ -27,6 +28,7 @@ export interface ModelSketchResponse {
   emotionTags: string[];
   p5Code: string;
   followUpQuestion: string;
+  interpretationNote: string;
 }
 
 export interface SketchValidationResult {

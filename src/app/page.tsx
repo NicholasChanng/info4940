@@ -44,6 +44,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [editedContext, setEditedContext] = useState<UserContext | null>(null);
+  const [canvasRuntimeError, setCanvasRuntimeError] = useState<string | null>(null);
   const [testModeEnabled, setTestModeEnabled] = useState(false);
   const [selectedFixtureId, setSelectedFixtureId] = useState(
     TEST_FIXTURES[0].id,
@@ -113,6 +114,7 @@ export default function HomePage() {
     setMessages(nextMessages);
     setIsLoading(true);
     setRequestError(null);
+    setCanvasRuntimeError(null);
 
     if (testModeEnabled) {
       const fixture = TEST_FIXTURES.find((f) => f.id === selectedFixtureId);
@@ -215,7 +217,7 @@ export default function HomePage() {
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[color:var(--muted)]">
-                Bare-bones MVP
+                AUGMENT YOUR CREATIVITY
               </p>
               <h1 className="text-4xl leading-tight sm:text-5xl">
                 Turn a life experience into a living sketch.
@@ -282,8 +284,12 @@ export default function HomePage() {
             onContextEdit={setEditedContext}
             onSubmit={handleSubmit}
             onReset={handleReset}
+            runtimeError={canvasRuntimeError}
           />
-          <SketchPreview code={deferredResponse?.p5Code ?? null} />
+          <SketchPreview
+            code={deferredResponse?.p5Code ?? null}
+            onRuntimeError={setCanvasRuntimeError}
+          />
         </section>
 
         <section>

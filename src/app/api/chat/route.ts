@@ -114,6 +114,7 @@ export async function POST(request: Request) {
       p5Code: draft.p5Code,
       repairApplied,
       followUpQuestion: draft.followUpQuestion,
+      interpretationNote: draft.interpretationNote,
     };
 
     return NextResponse.json(responseBody);

@@ -90,6 +90,7 @@ export function buildSketchPrompt(input: PromptInput): string {
     "visualMetaphors must contain 2 to 4 short phrases.",
     "emotionTags must contain 1 to 6 lower-case emotion phrases.",
     "followUpQuestion must be a single sentence asking the user something only they can answer — a sensory detail, emotional nuance, or preference that will shape the next sketch.",
+    "interpretationNote must be one sentence naming the single most consequential interpretive choice you made: which emotion or quality you prioritized and why, and what the user could say to shift it. Write it in plain language, not code. Example: 'I read this as quiet loneliness rather than anger because you mentioned stillness — tell me if you meant something sharper.'",
     "If the user expresses multiple emotions, do not collapse them into a single feeling.",
     "Represent mixed emotions explicitly in emotionTags, explanation, and visualMetaphors.",
     "If the emotions create ambiguity, conflict, or tension, acknowledge that tension instead of forcing a simplified interpretation.",

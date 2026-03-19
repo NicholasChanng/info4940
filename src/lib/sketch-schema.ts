@@ -26,13 +26,14 @@ export const modelSketchResponseSchema: z.ZodType<ModelSketchResponse> = z
     emotionTags: z.array(z.string().min(1).max(40)).min(1).max(6),
     p5Code: z.string().min(1).max(20000),
     followUpQuestion: z.string().min(1).max(300),
+    interpretationNote: z.string().min(1).max(300),
   })
   .strict();
 
 export const modelSketchResponseJsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["explanation", "visualMetaphors", "emotionTags", "p5Code", "followUpQuestion"],
+  required: ["explanation", "visualMetaphors", "emotionTags", "p5Code", "followUpQuestion", "interpretationNote"],
   properties: {
     explanation: {
       type: "string",
@@ -64,6 +65,11 @@ export const modelSketchResponseJsonSchema = {
       type: "string",
       description:
         "A single question asking the user something only they can answer — a sensory detail, an emotional nuance, or a directional preference that will shape the next sketch.",
+    },
+    interpretationNote: {
+      type: "string",
+      description:
+        "One sentence explaining the key interpretive choice the AI made: which emotion or detail it prioritized and why, and what would change the interpretation. Example: 'I read this as quiet sadness rather than anger because you mentioned stillness, so if you meant something sharper let me know.'",
     },
   },
 } as const;
