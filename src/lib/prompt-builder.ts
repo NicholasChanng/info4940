@@ -73,7 +73,7 @@ export function buildSketchPrompt(input: PromptInput): string {
   const userCorrectedMetaphorsSection =
     input.userCorrectedVisualMetaphors && input.userCorrectedVisualMetaphors.length > 0
       ? [
-          "User-corrected visual metaphors (incorporate these directly in the sketch):",
+          "User-corrected visual metaphors (incorporate these directly in the sketch; these take priority over the emotion color hints above — if a metaphor specifies a background quality such as 'bright background' or 'dark background', use it even if it conflicts with the palette):",
           input.userCorrectedVisualMetaphors.map((m) => `- ${m}`).join("\n"),
           "",
         ].join("\n")
@@ -97,7 +97,7 @@ export function buildSketchPrompt(input: PromptInput): string {
     "Matched emotion hints:",
     matchedEmotionSection,
     "",
-    "Deterministic emotion color hints:",
+    "Suggested emotion color hints (use these as defaults; user-corrected visual metaphors take priority when they conflict):",
     formatPaletteHints(input.matchedPalette),
     "",
     userCorrectedTagsSection,

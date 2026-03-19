@@ -13,8 +13,8 @@ export const chatRequestSchema = z.object({
   currentSketchCode: z.string().max(40000).optional(),
   userContext: z
     .object({
-      emotionTags: z.array(z.string().min(1).max(40)).max(6).optional(),
-      visualMetaphors: z.array(z.string().min(1).max(120)).max(4).optional(),
+      emotionTags: z.array(z.string().min(1).max(40)).max(12).optional(),
+      visualMetaphors: z.array(z.string().min(1).max(120)).max(8).optional(),
     })
     .optional(),
 });

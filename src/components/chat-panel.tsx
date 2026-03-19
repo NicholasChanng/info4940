@@ -14,6 +14,7 @@ interface ChatPanelProps {
   editedContext: UserContext | null;
   onContextEdit: (update: UserContext) => void;
   onSubmit: (value: string) => Promise<boolean>;
+  onReset: () => void;
 }
 
 const MAX_PROMPT_LENGTH = 600;
@@ -101,6 +102,7 @@ export function ChatPanel({
   editedContext,
   onContextEdit,
   onSubmit,
+  onReset,
 }: ChatPanelProps) {
   const [draft, setDraft] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
@@ -155,15 +157,26 @@ export function ChatPanel({
   return (
     <section className="relative isolate flex min-h-[816px] flex-col rounded-[28px] border border-white/55 bg-[color:var(--card)] p-5 shadow-[0_24px_80px_rgba(18,34,41,0.12)] backdrop-blur lg:h-[984px] lg:min-h-0">
       <div className="relative z-10 space-y-4 border-b border-[color:var(--line)] pb-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[color:var(--muted)]">
-            Chat Coach
-          </p>
-          <h2 className="text-3xl leading-tight">Describe the feeling first.</h2>
-          <p className="text-sm leading-6 text-[color:var(--muted)]">
-            The assistant will translate your life experience into visual metaphors,
-            explain the sketch simply, and generate a full p5.js sketch.
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[color:var(--muted)]">
+              Chat Coach
+            </p>
+            <h2 className="text-3xl leading-tight">Describe the feeling first.</h2>
+            <p className="text-sm leading-6 text-[color:var(--muted)]">
+              The assistant will translate your life experience into visual metaphors,
+              explain the sketch simply, and generate a full p5.js sketch.
+            </p>
+          </div>
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="shrink-0 rounded-full border border-[color:var(--line)] bg-white/60 px-3 py-1.5 text-xs font-semibold text-[color:var(--muted)] transition hover:bg-white hover:text-[color:var(--ink)]"
+            >
+              New sketch
+            </button>
+          )}
         </div>
         <PromptChips prompts={starterPrompts} onSelect={setDraft} />
       </div>
@@ -459,9 +472,31 @@ export function ChatPanel({
         <button
           type="submit"
           disabled={loading || !trimmedDraft || isOverLimit}
-          className="w-full rounded-full bg-[color:var(--ink)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-45"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--ink)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-45"
         >
-          {loading ? "Generating..." : "Generate sketch"}
+          {loading && (
+            <svg
+              className="h-4 w-4 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
+            </svg>
+          )}
+          {loading ? "Generating…" : "Generate sketch"}
         </button>
       </form>
     </section>

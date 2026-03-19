@@ -88,6 +88,13 @@ export default function HomePage() {
     applyFixture(selectedFixtureId, `[Test] ${fixture.label}`);
   }
 
+  function handleReset() {
+    setMessages([]);
+    setLatestResponse(null);
+    setRequestError(null);
+    setEditedContext(null);
+  }
+
   async function handleSubmit(value: string): Promise<boolean> {
     const trimmedValue = value.trim();
 
@@ -274,6 +281,7 @@ export default function HomePage() {
             editedContext={editedContext}
             onContextEdit={setEditedContext}
             onSubmit={handleSubmit}
+            onReset={handleReset}
           />
           <SketchPreview code={deferredResponse?.p5Code ?? null} />
         </section>
