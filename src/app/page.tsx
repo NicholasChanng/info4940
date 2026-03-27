@@ -4,6 +4,7 @@ import { startTransition, useDeferredValue, useState } from "react";
 
 import { ChatPanel } from "@/components/chat-panel";
 import { CodePanel } from "@/components/code-panel";
+import { GalleryModal } from "@/components/gallery-modal";
 import { SketchPreview } from "@/components/sketch-preview";
 import { TEST_FIXTURES } from "@/lib/test-fixtures";
 import type {
@@ -15,12 +16,6 @@ import type {
   UserContext,
 } from "@/lib/types";
 
-const starterPrompts = [
-  "I felt lonely in a crowded room at a party.",
-  "I felt like an outsider starting at a new school.",
-  "I finally felt on top of the world after finishing something hard.",
-  "I felt calm watching rain after a stressful week.",
-];
 
 function buildAssistantTranscriptContent(response: ChatResponse): string {
   return [
@@ -45,6 +40,7 @@ export default function HomePage() {
   const [requestError, setRequestError] = useState<string | null>(null);
   const [editedContext, setEditedContext] = useState<UserContext | null>(null);
   const [canvasRuntimeError, setCanvasRuntimeError] = useState<string | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(true);
   const [testModeEnabled, setTestModeEnabled] = useState(false);
   const [selectedFixtureId, setSelectedFixtureId] = useState(
     TEST_FIXTURES[0].id,
@@ -205,6 +201,8 @@ export default function HomePage() {
   }
 
   return (
+    <>
+    {galleryOpen && <GalleryModal onClose={() => setGalleryOpen(false)} />}
     <main className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-[-8%] top-[-5%] h-64 w-64 rounded-full bg-[#f8d582]/30 blur-3xl" />
@@ -224,19 +222,39 @@ export default function HomePage() {
               </h1>
               <p className="max-w-5xl text-sm leading-7 text-[color:var(--muted)] sm:text-base">
                 Describe a personal moment, let Gemini translate it into visual
-                metaphors, and watch the sketch update in a live sandbox.              </p>
+                metaphors, and watch the sketch update in a live sandbox. Sketches
+                are intentionally simple and abstract — shapes, motion, and color
+                stand in for feeling, not photorealism. See the{" "}
+                <button
+                  type="button"
+                  onClick={() => setGalleryOpen(true)}
+                  className="underline underline-offset-2 transition hover:text-[color:var(--ink)]"
+                >
+                  Gallery
+                </button>{" "}
+                to see what's possible after a few rounds of iteration.
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setTestModeEnabled((v) => !v)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                testModeEnabled
-                  ? "bg-amber-400 text-amber-900 hover:bg-amber-300"
-                  : "border border-[color:var(--line)] bg-white/60 text-[color:var(--muted)] hover:bg-white"
-              }`}
-            >
-              {testModeEnabled ? "Test Mode ON" : "Test Mode"}
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setGalleryOpen(true)}
+                className="rounded-full border border-[color:var(--line)] bg-white/60 px-3 py-1.5 text-xs font-semibold text-[color:var(--muted)] transition hover:bg-white"
+              >
+                Gallery
+              </button>
+              <button
+                type="button"
+                onClick={() => setTestModeEnabled((v) => !v)}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  testModeEnabled
+                    ? "bg-amber-400 text-amber-900 hover:bg-amber-300"
+                    : "border border-[color:var(--line)] bg-white/60 text-[color:var(--muted)] hover:bg-white"
+                }`}
+              >
+                {testModeEnabled ? "Test Mode ON" : "Test Mode"}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -302,16 +320,19 @@ export default function HomePage() {
                 It reads at most the last 6 messages. Ambiguous or conflicting input may produce an unexpected sketch;
                 use the editable tags to correct it rather than starting over.
               </p>
+              <p className="text-xs leading-5 text-[color:var(--muted)] mt-2">
+                Initial sketches will be abstract. Through iteration you can introduce more elements to make your sketches more descriptive.
+              </p>
             </div>
           </div>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <section className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
           <ChatPanel
             messages={messages}
             loading={isLoading}
             error={requestError}
-            starterPrompts={starterPrompts}
+
             editedContext={editedContext}
             onContextEdit={setEditedContext}
             onSubmit={handleSubmit}
@@ -333,5 +354,6 @@ export default function HomePage() {
         </section>
       </div>
     </main>
+    </>
   );
 }

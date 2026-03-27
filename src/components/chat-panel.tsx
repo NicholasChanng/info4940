@@ -9,7 +9,6 @@ const LOADING_STAGES = [
   "Writing sketch code…",
 ];
 
-import { PromptChips } from "@/components/prompt-chips";
 import { detectInterventionTriggers, generateInterventionResponse, shouldIntervene } from "@/lib/communication-protocol/intervention-detector";
 import type { UIChatMessage, UserContext } from "@/lib/types";
 
@@ -18,7 +17,6 @@ interface ChatPanelProps {
   loading: boolean;
   error: string | null;
   runtimeError: string | null;
-  starterPrompts: string[];
   editedContext: UserContext | null;
   onContextEdit: (update: UserContext) => void;
   onSubmit: (value: string) => Promise<boolean>;
@@ -133,7 +131,6 @@ export function ChatPanel({
   loading,
   error,
   runtimeError,
-  starterPrompts,
   editedContext,
   onContextEdit,
   onSubmit,
@@ -203,20 +200,17 @@ export function ChatPanel({
 
   return (
     <section className="relative isolate flex min-h-[816px] flex-col rounded-[28px] border border-white/55 bg-[color:var(--card)] p-5 shadow-[0_24px_80px_rgba(18,34,41,0.12)] backdrop-blur lg:h-[984px] lg:min-h-0">
-      <div className="relative z-10 space-y-4 border-b border-[color:var(--line)] pb-4">
-        {messages.length > 0 && (
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={onReset}
-              className="shrink-0 rounded-full border border-[color:var(--line)] bg-white/60 px-3 py-1.5 text-xs font-semibold text-[color:var(--muted)] transition hover:bg-white hover:text-[color:var(--ink)]"
-            >
-              New sketch
-            </button>
-          </div>
-        )}
-        <PromptChips prompts={starterPrompts} onSelect={setDraft} />
-      </div>
+      {messages.length > 0 && (
+        <div className="relative z-10 flex justify-end border-b border-[color:var(--line)] pb-4">
+          <button
+            type="button"
+            onClick={onReset}
+            className="shrink-0 rounded-full border border-[color:var(--line)] bg-white/60 px-3 py-1.5 text-xs font-semibold text-[color:var(--muted)] transition hover:bg-white hover:text-[color:var(--ink)]"
+          >
+            New sketch
+          </button>
+        </div>
+      )}
 
       <div className="relative z-0 mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
         {/* Intervention message display */}
@@ -332,12 +326,7 @@ export function ChatPanel({
           </div>
         )}
 
-        {messages.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-[color:var(--line)] bg-white/55 p-5 text-sm leading-6 text-[color:var(--muted)]">
-            Start with a personal moment, like feeling lonely in a crowd or finally
-            feeling at peace. Follow-up prompts can refine the current sketch.
-          </div>
-        ) : (
+        {messages.length === 0 ? null : (
           messages.map((message) => {
             const isLatestAssistant = message.id === lastAssistantMessageId;
             const payload = message.assistantPayload;

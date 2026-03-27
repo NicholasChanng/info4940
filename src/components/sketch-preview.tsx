@@ -37,7 +37,7 @@ export function SketchPreview({ code, onRuntimeError }: SketchPreviewProps) {
   }, []);
 
   return (
-    <section className="flex min-h-[680px] flex-col self-start rounded-[28px] border border-white/55 bg-[color:var(--card-strong)] p-5 shadow-[0_24px_80px_rgba(18,34,41,0.12)] backdrop-blur lg:sticky lg:top-8 lg:z-0 lg:h-[820px] lg:min-h-0">
+    <section className="flex min-h-[816px] flex-col rounded-[28px] border border-white/55 bg-[color:var(--card-strong)] p-5 shadow-[0_24px_80px_rgba(18,34,41,0.12)] backdrop-blur lg:sticky lg:top-8 lg:z-0 lg:h-[984px] lg:min-h-0">
       <div className="space-y-2 border-b border-[color:var(--line)] pb-4">
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[color:var(--muted)]">
           Live Preview
