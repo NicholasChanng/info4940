@@ -204,18 +204,8 @@ export function ChatPanel({
   return (
     <section className="relative isolate flex min-h-[816px] flex-col rounded-[28px] border border-white/55 bg-[color:var(--card)] p-5 shadow-[0_24px_80px_rgba(18,34,41,0.12)] backdrop-blur lg:h-[984px] lg:min-h-0">
       <div className="relative z-10 space-y-4 border-b border-[color:var(--line)] pb-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[color:var(--muted)]">
-              Chat Coach
-            </p>
-            <h2 className="text-3xl leading-tight">Describe the feeling first.</h2>
-            <p className="text-sm leading-6 text-[color:var(--muted)]">
-              The assistant will translate your life experience into visual metaphors,
-              explain the sketch simply, and generate a full p5.js sketch.
-            </p>
-          </div>
-          {messages.length > 0 && (
+        {messages.length > 0 && (
+          <div className="flex justify-end">
             <button
               type="button"
               onClick={onReset}
@@ -223,8 +213,8 @@ export function ChatPanel({
             >
               New sketch
             </button>
-          )}
-        </div>
+          </div>
+        )}
         <PromptChips prompts={starterPrompts} onSelect={setDraft} />
       </div>
 
@@ -341,40 +331,6 @@ export function ChatPanel({
             </div>
           </div>
         )}
-
-        <div className="rounded-[24px] border border-[color:var(--line)] bg-white/70 px-5 py-4 space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-            How this works
-          </p>
-          <div className="grid grid-cols-2 gap-3 text-xs leading-5">
-            <div>
-              <p className="font-semibold text-[color:var(--ink)] mb-1">Your role</p>
-              <ul className="space-y-1 text-[color:var(--muted)]">
-                <li>— Describe the experience in your own words</li>
-                <li>— Correct the emotion tags or metaphors if they feel wrong</li>
-                <li>— Answer the coach's follow-up to steer the next sketch</li>
-                <li>— Send follow-ups to refine, not replace, the sketch</li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-semibold text-[color:var(--ink)] mb-1">AI Coach role</p>
-              <ul className="space-y-1 text-[color:var(--muted)]">
-                <li>— Interpret your words into visual metaphors</li>
-                <li>— Generate and repair p5.js code</li>
-                <li>— Explain its key interpretive choices</li>
-                <li>— Ask one question per turn to reduce guessing</li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-[color:var(--line)] pt-3">
-            <p className="text-xs font-semibold text-[color:var(--muted)] mb-1">AI limitations</p>
-            <p className="text-xs leading-5 text-[color:var(--muted)]">
-              The AI only sees what you type — it has no memory of previous sessions and cannot view your screen.
-              It reads at most the last 6 messages. Ambiguous or conflicting input may produce an unexpected sketch;
-              use the editable tags to correct it rather than starting over.
-            </p>
-          </div>
-        </div>
 
         {messages.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-[color:var(--line)] bg-white/55 p-5 text-sm leading-6 text-[color:var(--muted)]">

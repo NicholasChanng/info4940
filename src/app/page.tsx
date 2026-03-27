@@ -224,9 +224,7 @@ export default function HomePage() {
               </h1>
               <p className="max-w-5xl text-sm leading-7 text-[color:var(--muted)] sm:text-base">
                 Describe a personal moment, let Gemini translate it into visual
-                metaphors, and watch the sketch update in a live sandbox. The code
-                stays visible so a beginner can learn from every iteration.
-              </p>
+                metaphors, and watch the sketch update in a live sandbox.              </p>
             </div>
             <button
               type="button"
@@ -273,6 +271,40 @@ export default function HomePage() {
             </div>
           </div>
         )}
+
+        <header className="rounded-[32px] border border-white/55 bg-white/55 px-6 py-6 shadow-[0_18px_72px_rgba(18,34,41,0.09)] backdrop-blur">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[color:var(--muted)] mb-4">
+            How this works
+          </p>
+          <div className="grid grid-cols-2 gap-6 text-sm leading-6 sm:grid-cols-4">
+            <div>
+              <p className="font-semibold text-[color:var(--ink)] mb-2">Your role</p>
+              <ul className="space-y-1 text-[color:var(--muted)] text-xs leading-5">
+                <li>— Describe the experience in your own words</li>
+                <li>— Correct the emotion tags or metaphors if they feel wrong</li>
+                <li>— Answer the coach's follow-up to steer the next sketch</li>
+                <li>— Send follow-ups to refine, not replace, the sketch</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold text-[color:var(--ink)] mb-2">AI Coach role</p>
+              <ul className="space-y-1 text-[color:var(--muted)] text-xs leading-5">
+                <li>— Interpret your words into visual metaphors</li>
+                <li>— Generate and repair p5.js code</li>
+                <li>— Explain its key interpretive choices</li>
+                <li>— Ask one question per turn to reduce guessing</li>
+              </ul>
+            </div>
+            <div className="col-span-2">
+              <p className="font-semibold text-[color:var(--ink)] mb-2">AI limitations</p>
+              <p className="text-xs leading-5 text-[color:var(--muted)]">
+                The AI only sees what you type — it has no memory of previous sessions and cannot view your screen.
+                It reads at most the last 6 messages. Ambiguous or conflicting input may produce an unexpected sketch;
+                use the editable tags to correct it rather than starting over.
+              </p>
+            </div>
+          </div>
+        </header>
 
         <section className="grid gap-6 lg:grid-cols-2 lg:items-start">
           <ChatPanel
