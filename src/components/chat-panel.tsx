@@ -6,7 +6,7 @@ import { detectInterventionTriggers, generateInterventionResponse, shouldInterve
 import type { InterventionResponse } from "@/lib/communication-protocol/types";
 import { MAX_PROMPT_LENGTH } from "@/lib/constants";
 import { getEmotionColorEntries } from "@/lib/emotion-colors";
-import type { UIChatMessage, UserContext } from "@/lib/types";
+import type { ApiErrorType, UIChatMessage, UserContext } from "@/lib/types";
 import { detectVulnerability } from "@/lib/vulnerability-detector";
 import type { VulnerabilitySignal } from "@/lib/vulnerability-detector";
 
@@ -33,6 +33,7 @@ interface ChatPanelProps {
   messages: UIChatMessage[];
   loading: boolean;
   error: string | null;
+  errorType?: ApiErrorType | null;
   runtimeError: string | null;
   editedContext: UserContext | null;
   onContextEdit: (update: UserContext) => void;
@@ -131,10 +132,31 @@ function EditableChipList({
   );
 }
 
+function errorGuidance(errorType: ApiErrorType | null): { what: string; tip: string | null } {
+  switch (errorType) {
+    case "generation_failed":
+      return {
+        what: "The AI generated code that couldn't run — this wasn't your description.",
+        tip: "Try again as-is. If it keeps failing, describe what the experience looks or feels like physically (movement, weight, texture, color) rather than naming the emotion.",
+      };
+    case "api_unavailable":
+      return { what: "Gemini is temporarily unavailable.", tip: "Wait a moment and try again — nothing is wrong with your description." };
+    case "rate_limited":
+      return { what: "Gemini's quota is exhausted.", tip: "Wait for quota to reset, then try again." };
+    case "blocked":
+      return { what: "The visual output was blocked.", tip: "Try describing a different aspect of the experience." };
+    case "missing_key":
+      return { what: "API key is missing.", tip: null };
+    default:
+      return { what: "Something went wrong.", tip: "Try again." };
+  }
+}
+
 export function ChatPanel({
   messages,
   loading,
   error,
+  errorType = null,
   runtimeError,
   editedContext,
   onContextEdit,
@@ -218,7 +240,7 @@ export function ChatPanel({
     await submitSketch(trimmedDraft);
   }
 
-  const visibleError = localError ?? error;
+
 
   return (
     <section className="relative isolate flex min-h-[816px] flex-col rounded-[28px] border border-white/55 bg-[color:var(--card)] p-5 shadow-[0_24px_80px_rgba(18,34,41,0.12)] backdrop-blur lg:h-[984px] lg:min-h-0">
@@ -546,10 +568,20 @@ export function ChatPanel({
 
         <div className="flex items-center justify-between gap-3 text-xs text-[color:var(--muted)]">
           <span>{characterCount}/{MAX_PROMPT_LENGTH}</span>
-          {visibleError ? (
-            <span className="font-medium text-[color:var(--warning)]">{visibleError}</span>
+          {localError ? (
+            <span className="font-medium text-[color:var(--warning)]">{localError}</span>
           ) : null}
         </div>
+
+        {error && !localError ? (() => {
+          const { what, tip } = errorGuidance(errorType);
+          return (
+            <div className="rounded-[16px] border border-orange-200 bg-orange-50 px-4 py-3 text-xs space-y-1">
+              <p className="font-semibold text-orange-700">{what}</p>
+              {tip && <p className="text-orange-600">{tip}</p>}
+            </div>
+          );
+        })() : null}
         <button
           type="submit"
           disabled={loading || !trimmedDraft || isOverLimit}

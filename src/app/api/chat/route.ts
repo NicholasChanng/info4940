@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     // Harm 3: blocked sketches are never repaired or served
     if (validationResult.blocked) {
       return NextResponse.json(
-        { error: "Visual output blocked: the generated code attempts to render a restricted symbol. Please describe a different experience." },
+        { error: "Visual output blocked: the generated code attempts to render a restricted symbol. Please describe a different experience.", errorType: "blocked" },
         { status: 422 },
       );
     }
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
       validationResult = validateSketchCode(draft.p5Code);
       if (validationResult.blocked) {
         return NextResponse.json(
-          { error: "Visual output blocked: the generated code attempts to render a restricted symbol. Please describe a different experience." },
+          { error: "Visual output blocked: the generated code attempts to render a restricted symbol. Please describe a different experience.", errorType: "blocked" },
           { status: 422 },
         );
       }
@@ -148,28 +148,28 @@ export async function POST(request: Request) {
     if (error instanceof GeminiRequestError) {
       if (error.status === 429) {
         return NextResponse.json(
-          {
-            error: error.message,
-          },
+          { error: error.message, errorType: "rate_limited" },
           { status: 429 },
+        );
+      }
+
+      if (error.status === 503) {
+        return NextResponse.json(
+          { error: "Gemini is temporarily unavailable. Please wait a moment and try again.", errorType: "api_unavailable" },
+          { status: 503 },
         );
       }
 
       if (error.message === "Missing GEMINI_API_KEY.") {
         return NextResponse.json(
-          {
-            error: "Missing GEMINI_API_KEY in .env.local. Add it and restart the dev server.",
-          },
+          { error: "Missing GEMINI_API_KEY in .env.local. Add it and restart the dev server.", errorType: "missing_key" },
           { status: 500 },
         );
       }
     }
 
     return NextResponse.json(
-      {
-        error:
-          "I couldn't turn that description into a working sketch just now. Please try again.",
-      },
+      { error: "The AI generated code that couldn't run. This is a technical hiccup, not your description. Try again — it usually resolves on retry.", errorType: "generation_failed" },
       { status: 500 },
     );
   }

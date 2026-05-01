@@ -37,8 +37,17 @@ export interface SketchValidationResult {
   blocked?: boolean;
 }
 
+export type ApiErrorType =
+  | "generation_failed"
+  | "blocked"
+  | "api_unavailable"
+  | "rate_limited"
+  | "missing_key"
+  | "validation_error";
+
 export interface ApiErrorResponse {
   error: string;
+  errorType?: ApiErrorType;
 }
 
 export interface UIChatMessage extends ChatMessage {

@@ -65,11 +65,13 @@ export const modelSketchResponseJsonSchema = {
       type: "string",
       description:
         "A single question asking the user something only they can answer — a sensory detail, an emotional nuance, or a directional preference that will shape the next sketch.",
+      maxLength: 300,
     },
     interpretationNote: {
       type: "string",
       description:
-        "One sentence explaining the key interpretive choice the AI made: which emotion or detail it prioritized and why, and what would change the interpretation. Example: 'I read this as quiet sadness rather than anger because you mentioned stillness, so if you meant something sharper let me know.'",
+        "One sentence (under 300 characters) explaining the key interpretive choice the AI made: which emotion or detail it prioritized and why, and what would change the interpretation. Example: 'I read this as quiet sadness rather than anger because you mentioned stillness, so if you meant something sharper let me know.'",
+      maxLength: 300,
     },
   },
 } as const;

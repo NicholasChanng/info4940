@@ -9,6 +9,7 @@ import { SketchPreview } from "@/components/sketch-preview";
 import { TEST_FIXTURES } from "@/lib/test-fixtures";
 import type {
   ApiErrorResponse,
+  ApiErrorType,
   ChatMessage,
   ChatRequest,
   ChatResponse,
@@ -38,6 +39,7 @@ export default function HomePage() {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [requestErrorType, setRequestErrorType] = useState<ApiErrorType | null>(null);
   const [editedContext, setEditedContext] = useState<UserContext | null>(null);
   const [canvasRuntimeError, setCanvasRuntimeError] = useState<string | null>(null);
   const [sketchBlocked, setSketchBlocked] = useState(false);
@@ -90,6 +92,7 @@ export default function HomePage() {
     setMessages([]);
     setLatestResponse(null);
     setRequestError(null);
+    setRequestErrorType(null);
     setEditedContext(null);
     setSketchBlocked(false);
   }
@@ -112,6 +115,7 @@ export default function HomePage() {
     setMessages(nextMessages);
     setIsLoading(true);
     setRequestError(null);
+    setRequestErrorType(null);
     setCanvasRuntimeError(null);
     setSketchBlocked(false);
 
@@ -166,12 +170,13 @@ export default function HomePage() {
         | ApiErrorResponse;
 
       if (!response.ok) {
-        const errorMessage = "error" in responseBody
-          ? responseBody.error
-          : "The sketch request failed. Please try again.";
-        if (response.status === 422 && errorMessage.toLowerCase().includes("blocked")) {
+        const errorBody = responseBody as ApiErrorResponse;
+        const errorMessage = errorBody.error ?? "The sketch request failed. Please try again.";
+        const errorType = errorBody.errorType ?? null;
+        if (response.status === 422 && errorType === "blocked") {
           setSketchBlocked(true);
         }
+        setRequestErrorType(errorType);
         throw new Error(errorMessage);
       }
 
@@ -337,7 +342,7 @@ export default function HomePage() {
             messages={messages}
             loading={isLoading}
             error={requestError}
-
+            errorType={requestErrorType}
             editedContext={editedContext}
             onContextEdit={setEditedContext}
             onSubmit={handleSubmit}
