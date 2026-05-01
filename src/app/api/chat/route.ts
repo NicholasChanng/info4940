@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { MAX_PROMPT_LENGTH } from "@/lib/constants";
+import { logHarms } from "@/lib/harm-logging";
 import {
   deriveEmotionContext,
   resolveEmotionTags,
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (trimmedPrompt.length > 600) {
+  if (trimmedPrompt.length > MAX_PROMPT_LENGTH) {
     return NextResponse.json(
       { error: "Please keep the prompt under 600 characters." },
       { status: 400 },
@@ -81,6 +83,14 @@ export async function POST(request: Request) {
     let validationResult = validateSketchCode(draft.p5Code);
     let repairApplied = false;
 
+    // Harm 3: blocked sketches are never repaired or served
+    if (validationResult.blocked) {
+      return NextResponse.json(
+        { error: "Visual output blocked: the generated code attempts to render a restricted symbol. Please describe a different experience." },
+        { status: 422 },
+      );
+    }
+
     if (!validationResult.ok) {
       repairApplied = true;
       draft = await repairSketchDraft({
@@ -95,6 +105,12 @@ export async function POST(request: Request) {
       });
 
       validationResult = validateSketchCode(draft.p5Code);
+      if (validationResult.blocked) {
+        return NextResponse.json(
+          { error: "Visual output blocked: the generated code attempts to render a restricted symbol. Please describe a different experience." },
+          { status: 422 },
+        );
+      }
     }
 
     if (!validationResult.ok) {
@@ -105,6 +121,14 @@ export async function POST(request: Request) {
       draft.emotionTags,
       emotionContext.matchedEmotions,
     );
+
+    // Harm 1 & 2: log cultural and disability signals for audit
+    logHarms({
+      prompt: trimmedPrompt,
+      messageCount: recentMessages.length,
+      palette: resolvePaletteForEmotionTags(emotionTags, emotionContext.palette),
+      visualMetaphors: draft.visualMetaphors,
+    });
 
     const responseBody: ChatResponse = {
       explanation: draft.explanation,

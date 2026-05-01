@@ -7,10 +7,11 @@ import type { PreviewMessagePayload } from "@/lib/types";
 
 interface SketchPreviewProps {
   code: string | null;
+  blocked?: boolean;
   onRuntimeError?: (message: string) => void;
 }
 
-export function SketchPreview({ code, onRuntimeError }: SketchPreviewProps) {
+export function SketchPreview({ code, blocked, onRuntimeError }: SketchPreviewProps) {
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,7 +56,22 @@ export function SketchPreview({ code, onRuntimeError }: SketchPreviewProps) {
       ) : null}
 
       <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-[24px] border border-[color:var(--line)] bg-[#f7f3eb]">
-        {code ? (
+        {/* Harm 3: blocked overlay replaces the canvas when a prohibited symbol is detected */}
+        {blocked ? (
+          <div className="flex h-full min-h-[480px] flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="rounded-full border-2 border-rose-300 bg-rose-50 p-4">
+              <svg className="h-8 w-8 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-rose-700">Visual Output Blocked</p>
+              <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">
+                The generated code attempts to render a restricted symbol. Please describe a different experience.
+              </p>
+            </div>
+          </div>
+        ) : code ? (
           <iframe
             key={code}
             title="p5.js sketch preview"

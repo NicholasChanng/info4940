@@ -71,7 +71,7 @@ export function buildSketchPrompt(input: PromptInput): string {
           input.userCorrectedEmotionTags.map((tag) => `- ${tag}`).join("\n"),
           "",
         ].join("\n")
-      : "";
+      : null;
 
   const userCorrectedMetaphorsSection =
     input.userCorrectedVisualMetaphors && input.userCorrectedVisualMetaphors.length > 0
@@ -80,7 +80,7 @@ export function buildSketchPrompt(input: PromptInput): string {
           input.userCorrectedVisualMetaphors.map((metaphor) => `- ${metaphor}`).join("\n"),
           "",
         ].join("\n")
-      : "";
+      : null;
 
   return [
     "Help the user express their life experience as a complete p5.js sketch.",
@@ -124,7 +124,7 @@ export function buildSketchPrompt(input: PromptInput): string {
     "Build one complete replacement sketch that preserves the user's intent and incorporates the most recent request.",
     "The sketch should feel coherent, emotionally faithful, and visually legible at a glance.",
   ]
-    .filter((line) => line !== undefined && line !== "")
+    .filter((line): line is string => line != null)
     .join("\n");
 }
 

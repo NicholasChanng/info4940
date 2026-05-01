@@ -2,9 +2,7 @@ import emotionColorData from "../../content/emotion-colors.json";
 
 import type { ChatMessage, PaletteEntry } from "@/lib/types";
 
-interface EmotionColorEntry extends PaletteEntry {}
-
-const emotionColorEntries = emotionColorData as EmotionColorEntry[];
+const emotionColorEntries = emotionColorData as PaletteEntry[];
 
 const emotionColorMap = new Map(
   emotionColorEntries.map((entry) => [entry.emotion, entry.hex]),
@@ -21,12 +19,12 @@ function normalizeEmotion(value: string): string {
 function lookupEmotionKey(value: string): string | null {
   const normalizedValue = normalizeEmotion(value);
 
+  // Fast path: exact match via Map
+  if (emotionColorMap.has(normalizedValue)) return normalizedValue;
+
+  // Substring match: find an entry whose key is contained in the value or vice-versa
   for (const entry of emotionColorEntries) {
-    if (
-      normalizedValue === entry.emotion ||
-      normalizedValue.includes(entry.emotion) ||
-      entry.emotion.includes(normalizedValue)
-    ) {
+    if (normalizedValue.includes(entry.emotion) || entry.emotion.includes(normalizedValue)) {
       return entry.emotion;
     }
   }
@@ -67,8 +65,14 @@ export function deriveEmotionContext(messages: ChatMessage[]): {
   matchedEmotions: string[];
   palette: PaletteEntry[];
 } {
-  const latestUserMessage =
-    [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  let latestUserMessage = "";
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user") {
+      latestUserMessage = messages[i].content;
+      break;
+    }
+  }
+
   const transcript = messages
     .map((message) => `${message.role}: ${message.content}`)
     .join("\n");
@@ -100,10 +104,9 @@ export function resolvePaletteForEmotionTags(
   fallbackPalette: PaletteEntry[],
 ): PaletteEntry[] {
   const palette = getPaletteForEmotions(emotionTags);
-
   return palette.length > 0 ? palette : fallbackPalette;
 }
 
-export function getEmotionColorEntries(): EmotionColorEntry[] {
+export function getEmotionColorEntries(): PaletteEntry[] {
   return emotionColorEntries;
 }

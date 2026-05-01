@@ -7,6 +7,7 @@ export interface InterventionTrigger {
 export interface InterventionResponse {
   message: string;
   options?: string[];
+  optionSuffix?: string;
   requiresUserInput: boolean;
   followUpAction?: 'clarify' | 'explain' | 'correct';
 }
