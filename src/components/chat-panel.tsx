@@ -2,14 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-import { detectInterventionTriggers, generateInterventionResponse, shouldIntervene } from "@/lib/communication-protocol/intervention-detector";
-import type { InterventionResponse } from "@/lib/communication-protocol/types";
-import { MAX_PROMPT_LENGTH } from "@/lib/constants";
-import { getEmotionColorEntries } from "@/lib/emotion-colors";
-import type { UIChatMessage, UserContext } from "@/lib/types";
-import { detectVulnerability } from "@/lib/vulnerability-detector";
-import type { VulnerabilitySignal } from "@/lib/vulnerability-detector";
-
 const LOADING_STAGES = [
   "Reading your experience…",
   "Identifying the emotional core…",
@@ -17,17 +9,8 @@ const LOADING_STAGES = [
   "Writing sketch code…",
 ];
 
-// Harm 4: visual style quick-picks for the assistive prompt panel
-const STYLE_CHIPS = [
-  { label: "still and slow", suffix: "with a still, slow quality" },
-  { label: "fast and urgent", suffix: "with fast, urgent movement" },
-  { label: "quiet and muted", suffix: "with quiet, muted colors" },
-  { label: "vivid and bright", suffix: "with vivid, bright colors" },
-  { label: "chaotic and scattered", suffix: "with a scattered, chaotic energy" },
-  { label: "centered and calm", suffix: "with a centered, calm feeling" },
-];
-
-const EMOTION_CHIPS = getEmotionColorEntries().map((e) => e.emotion);
+import { detectInterventionTriggers, generateInterventionResponse, shouldIntervene } from "@/lib/communication-protocol/intervention-detector";
+import type { UIChatMessage, UserContext } from "@/lib/types";
 
 interface ChatPanelProps {
   messages: UIChatMessage[];
@@ -66,6 +49,9 @@ function humanizeRuntimeError(message: string): { summary: string; tip: string }
   };
 }
 
+const MAX_PROMPT_LENGTH = 600;
+
+// Inline chip list with add/remove editing
 function EditableChipList({
   items,
   onRemove,
@@ -92,7 +78,10 @@ function EditableChipList({
   return (
     <div className="flex flex-wrap gap-2">
       {items.map((item, i) => (
-        <span key={`${item}-${i}`} className={`inline-flex items-center gap-1 ${chipClassName}`}>
+        <span
+          key={`${item}-${i}`}
+          className={`inline-flex items-center gap-1 ${chipClassName}`}
+        >
           {item}
           <button
             type="button"
@@ -111,8 +100,14 @@ function EditableChipList({
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") { e.preventDefault(); commit(); }
-            if (e.key === "Escape") { setAdding(false); setInputValue(""); }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            }
+            if (e.key === "Escape") {
+              setAdding(false);
+              setInputValue("");
+            }
           }}
           onBlur={commit}
           placeholder={inputPlaceholder}
@@ -143,8 +138,7 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const [draft, setDraft] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
-  const [interventionResponse, setInterventionResponse] = useState<InterventionResponse | null>(null);
-  const [vulnerabilitySignal, setVulnerabilitySignal] = useState<VulnerabilitySignal | null>(null);
+  const [interventionMessage, setInterventionMessage] = useState<string | null>(null);
   const [loadingStageIndex, setLoadingStageIndex] = useState(0);
 
   useEffect(() => {
@@ -152,39 +146,23 @@ export function ChatPanel({
       setLoadingStageIndex(0);
       return;
     }
-    const id = setInterval(() => {
-      setLoadingStageIndex((i) => {
-        if (i >= LOADING_STAGES.length - 1) {
-          clearInterval(id);
-          return i;
-        }
-        return i + 1;
-      });
+    const interval = setInterval(() => {
+      setLoadingStageIndex((i) => Math.min(i + 1, LOADING_STAGES.length - 1));
     }, 2200);
-    return () => clearInterval(id);
+    return () => clearInterval(interval);
   }, [loading]);
 
   const trimmedDraft = draft.trim();
   const characterCount = draft.length;
   const isOverLimit = characterCount > MAX_PROMPT_LENGTH;
-  const wordCount = trimmedDraft ? trimmedDraft.split(/\s+/).filter(Boolean).length : 0;
-  // Harm 4: show assistive panel when user has typed something short
-  const showPromptAssistant = trimmedDraft.length > 0 && wordCount < 8;
 
+  // Only the last assistant message is editable
   let lastAssistantMessageId: string | null = null;
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].role === "assistant") {
       lastAssistantMessageId = messages[i].id;
       break;
     }
-  }
-
-  async function submitSketch(value: string) {
-    setVulnerabilitySignal(null);
-    setLocalError(null);
-    setInterventionResponse(null);
-    const succeeded = await onSubmit(value);
-    if (succeeded) setDraft("");
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -194,31 +172,31 @@ export function ChatPanel({
       setLocalError("Describe the experience you want the sketch to communicate.");
       return;
     }
+
     if (isOverLimit) {
       setLocalError("Keep the prompt under 600 characters for this MVP.");
       return;
     }
 
-    // Harm 5: vulnerability check — pause and show reframing card before generating
-    if (!vulnerabilitySignal) {
-      const signal = detectVulnerability(trimmedDraft);
-      if (signal.level !== "none") {
-        setVulnerabilitySignal(signal);
-        return;
-      }
-    }
-
-    // Communication intervention check
+    // Check for communication issues before submitting
     const triggers = detectInterventionTriggers(trimmedDraft);
     if (shouldIntervene(triggers, trimmedDraft)) {
-      setInterventionResponse(generateInterventionResponse(triggers[0], trimmedDraft));
+      const intervention = generateInterventionResponse(triggers[0], trimmedDraft);
+      setInterventionMessage(intervention.message);
       return;
     }
 
-    await submitSketch(trimmedDraft);
+    setLocalError(null);
+    setInterventionMessage(null);
+    const submittedDraft = trimmedDraft;
+    const succeeded = await onSubmit(submittedDraft);
+
+    if (succeeded) {
+      setDraft("");
+    }
   }
 
-  const visibleError = localError ?? error;
+  const visibleError = localError ?? error ?? interventionMessage;
 
   return (
     <section className="relative isolate flex min-h-[816px] flex-col rounded-[28px] border border-white/55 bg-[color:var(--card)] p-5 shadow-[0_24px_80px_rgba(18,34,41,0.12)] backdrop-blur lg:h-[984px] lg:min-h-0">
@@ -235,81 +213,116 @@ export function ChatPanel({
       )}
 
       <div className="relative z-0 mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-
-        {/* Harm 5: vulnerability reframing card */}
-        {vulnerabilitySignal && vulnerabilitySignal.level !== "none" && (
-          <div className={`rounded-[24px] border px-4 py-4 ${
-            vulnerabilitySignal.level === "crisis"
-              ? "border-rose-300 bg-rose-50"
-              : "border-violet-200 bg-violet-50"
-          }`}>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-              A note before we continue
-            </p>
-            <p className="text-sm leading-6 text-[color:var(--ink)]">
-              What you shared sounds deeply personal. This tool is here to help you express it through art —
-              it&apos;s not a therapist or a crisis line, and the sketch it creates won&apos;t be able to hold what you&apos;re carrying.
-            </p>
-            {vulnerabilitySignal.level === "crisis" && (
-              <p className="mt-2 text-sm leading-6 text-rose-700">
-                If you&apos;re in crisis or need to talk to someone, please reach out to the{" "}
-                <a
-                  href="https://988lifeline.org"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline underline-offset-2 font-medium"
-                >
-                  988 Suicide &amp; Crisis Lifeline
-                </a>{" "}
-                — call or text <strong>988</strong>, available 24/7.
-              </p>
-            )}
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => submitSketch(trimmedDraft)}
-                className="rounded-full bg-[color:var(--ink)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-black"
-              >
-                Continue to sketch
-              </button>
-              <button
-                type="button"
-                onClick={() => setVulnerabilitySignal(null)}
-                className="rounded-full border border-[color:var(--line)] bg-white/60 px-4 py-2 text-xs font-semibold text-[color:var(--muted)] transition hover:bg-white"
-              >
-                Go back
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Communication intervention card */}
-        {interventionResponse && (
+        {/* Intervention message display */}
+        {interventionMessage && (
           <div className="rounded-[24px] border border-[color:var(--accent)] bg-[color:var(--accent-soft)] px-4 py-4">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
               AI Coach
             </p>
-            <p className="text-sm leading-6 text-[color:var(--ink)]">{interventionResponse.message}</p>
-            {interventionResponse.options && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {interventionResponse.options.map((option) => (
+            <p className="text-sm leading-6 text-[color:var(--ink)]">{interventionMessage}</p>
+            <p className="mt-2 text-xs text-[color:var(--muted)]">
+              What do you mean by that? Please be more specific and concrete.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {interventionMessage.includes("heavier") && (
+                <>
                   <button
-                    key={option}
                     type="button"
                     onClick={() => {
-                      const suffix = interventionResponse.optionSuffix
-                        ? ` - ${interventionResponse.optionSuffix} ${option.toLowerCase()}`
-                        : ` - ${option.toLowerCase()}`;
-                      setDraft(trimmedDraft + suffix);
-                      setInterventionResponse(null);
+                      setDraft(trimmedDraft + " - I meant slower movement and pacing");
+                      setInterventionMessage(null);
                     }}
                     className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
                   >
-                    {option}
+                    Slower movement and pacing
                   </button>
-                ))}
-              </div>
-            )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - I meant darker colors and tones");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Darker colors and tones
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - I meant denser visual elements");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Denser visual elements
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - I meant more weight in the composition");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    More weight in the composition
+                  </button>
+                </>
+              )}
+              {interventionMessage.includes("multiple emotions") && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - The dominant emotion should be loneliness");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Loneliness
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - The dominant emotion should be hope");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Hope
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - The dominant emotion should be anxiety");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Anxiety
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - The dominant emotion should be calm");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Calm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(trimmedDraft + " - The dominant emotion should be excitement");
+                      setInterventionMessage(null);
+                    }}
+                    className="rounded-full bg-white px-3 py-1 text-xs text-[color:var(--ink)] border border-[color:var(--line)] hover:bg-[color:var(--accent-soft)] transition"
+                  >
+                    Excitement
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -318,6 +331,7 @@ export function ChatPanel({
             const isLatestAssistant = message.id === lastAssistantMessageId;
             const payload = message.assistantPayload;
 
+            // For the latest assistant message, use editedContext overrides if present
             const displayedTags = isLatestAssistant
               ? (editedContext?.emotionTags ?? payload?.emotionTags ?? [])
               : payload?.emotionTags ?? [];
@@ -388,7 +402,10 @@ export function ChatPanel({
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {displayedMetaphors.map((metaphor) => (
-                            <span key={metaphor} className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-medium text-[color:var(--ink)]">
+                            <span
+                              key={metaphor}
+                              className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-medium text-[color:var(--ink)]"
+                            >
                               {metaphor}
                             </span>
                           ))}
@@ -418,7 +435,10 @@ export function ChatPanel({
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {displayedTags.map((emotion) => (
-                            <span key={emotion} className="rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--ink)]">
+                            <span
+                              key={emotion}
+                              className="rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-medium text-[color:var(--ink)]"
+                            >
                               {emotion}
                             </span>
                           ))}
@@ -437,7 +457,9 @@ export function ChatPanel({
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
                           How I read this
                         </p>
-                        <p className="text-sm leading-6 text-[color:var(--ink)]">{payload.interpretationNote}</p>
+                        <p className="text-sm leading-6 text-[color:var(--ink)]">
+                          {payload.interpretationNote}
+                        </p>
                       </div>
                     )}
 
@@ -446,7 +468,9 @@ export function ChatPanel({
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
                           Coach asks
                         </p>
-                        <p className="text-sm leading-6 text-[color:var(--ink)]">{payload.followUpQuestion}</p>
+                        <p className="text-sm leading-6 text-[color:var(--ink)]">
+                          {payload.followUpQuestion}
+                        </p>
                       </div>
                     )}
 
@@ -504,48 +528,8 @@ export function ChatPanel({
           placeholder="Example: I felt like everyone else knew how to belong, and I was moving half a beat behind them."
           className="w-full rounded-[24px] border border-[color:var(--line)] bg-white/85 px-4 py-3 text-sm leading-6 text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--muted)] focus:border-[color:var(--accent)] focus:ring-2 focus:ring-[color:var(--accent-soft)]"
         />
-
-        {/* Harm 4: assistive prompt panel — appears when draft is short */}
-        {showPromptAssistant && (
-          <div className="rounded-[20px] border border-[color:var(--line)] bg-white/70 px-4 py-3 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-              Prompt assistant — tap to add detail
-            </p>
-            <div>
-              <p className="mb-1.5 text-[11px] text-[color:var(--muted)]">Emotion</p>
-              <div className="flex flex-wrap gap-1.5">
-                {EMOTION_CHIPS.map((emotion) => (
-                  <button
-                    key={emotion}
-                    type="button"
-                    onClick={() => setDraft((d) => `${d.trimEnd()} — feeling ${emotion}`)}
-                    className="rounded-full border border-[color:var(--line)] bg-white px-3 py-1 text-xs text-[color:var(--ink)] transition hover:bg-[color:var(--accent-soft)] hover:border-[color:var(--accent)]"
-                  >
-                    {emotion}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="mb-1.5 text-[11px] text-[color:var(--muted)]">Visual quality</p>
-              <div className="flex flex-wrap gap-1.5">
-                {STYLE_CHIPS.map(({ label, suffix }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => setDraft((d) => `${d.trimEnd()}, ${suffix}`)}
-                    className="rounded-full border border-[color:var(--line)] bg-white px-3 py-1 text-xs text-[color:var(--ink)] transition hover:bg-[color:var(--accent-soft)] hover:border-[color:var(--accent)]"
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="flex items-center justify-between gap-3 text-xs text-[color:var(--muted)]">
-          <span>{characterCount}/{MAX_PROMPT_LENGTH}</span>
+          <span>{characterCount}/600</span>
           {visibleError ? (
             <span className="font-medium text-[color:var(--warning)]">{visibleError}</span>
           ) : null}
@@ -556,9 +540,25 @@ export function ChatPanel({
           className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--ink)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-45"
         >
           {loading && (
-            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <svg
+              className="h-4 w-4 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
             </svg>
           )}
           {loading ? LOADING_STAGES[loadingStageIndex] : "Generate sketch"}

@@ -34,7 +34,6 @@ export interface ModelSketchResponse {
 export interface SketchValidationResult {
   ok: boolean;
   errors: string[];
-  blocked?: boolean;
 }
 
 export interface ApiErrorResponse {

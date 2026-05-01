@@ -40,7 +40,6 @@ export default function HomePage() {
   const [requestError, setRequestError] = useState<string | null>(null);
   const [editedContext, setEditedContext] = useState<UserContext | null>(null);
   const [canvasRuntimeError, setCanvasRuntimeError] = useState<string | null>(null);
-  const [sketchBlocked, setSketchBlocked] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(true);
   const [testModeEnabled, setTestModeEnabled] = useState(false);
   const [selectedFixtureId, setSelectedFixtureId] = useState(
@@ -91,7 +90,6 @@ export default function HomePage() {
     setLatestResponse(null);
     setRequestError(null);
     setEditedContext(null);
-    setSketchBlocked(false);
   }
 
   async function handleSubmit(value: string): Promise<boolean> {
@@ -113,7 +111,6 @@ export default function HomePage() {
     setIsLoading(true);
     setRequestError(null);
     setCanvasRuntimeError(null);
-    setSketchBlocked(false);
 
     if (testModeEnabled) {
       const fixture = TEST_FIXTURES.find((f) => f.id === selectedFixtureId);
@@ -166,13 +163,11 @@ export default function HomePage() {
         | ApiErrorResponse;
 
       if (!response.ok) {
-        const errorMessage = "error" in responseBody
-          ? responseBody.error
-          : "The sketch request failed. Please try again.";
-        if (response.status === 422 && errorMessage.toLowerCase().includes("blocked")) {
-          setSketchBlocked(true);
-        }
-        throw new Error(errorMessage);
+        throw new Error(
+          "error" in responseBody
+            ? responseBody.error
+            : "The sketch request failed. Please try again.",
+        );
       }
 
       const chatResponse = responseBody as ChatResponse;
@@ -346,7 +341,6 @@ export default function HomePage() {
           />
           <SketchPreview
             code={deferredResponse?.p5Code ?? null}
-            blocked={sketchBlocked}
             onRuntimeError={setCanvasRuntimeError}
           />
         </section>
