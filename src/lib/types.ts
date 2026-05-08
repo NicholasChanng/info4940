@@ -38,6 +38,13 @@ export interface SketchValidationResult {
 
 export interface ApiErrorResponse {
   error: string;
+  /** True when a content-safety filter blocked a generated output (canvas overlay required). */
+  blocked?: boolean;
+}
+
+export interface HateSymbolCheckResult {
+  blocked: boolean;
+  reason?: string;
 }
 
 export interface UIChatMessage extends ChatMessage {

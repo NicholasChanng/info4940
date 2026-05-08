@@ -7,10 +7,11 @@ import type { PreviewMessagePayload } from "@/lib/types";
 
 interface SketchPreviewProps {
   code: string | null;
+  blocked?: boolean;
   onRuntimeError?: (message: string) => void;
 }
 
-export function SketchPreview({ code, onRuntimeError }: SketchPreviewProps) {
+export function SketchPreview({ code, blocked, onRuntimeError }: SketchPreviewProps) {
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,8 +55,19 @@ export function SketchPreview({ code, onRuntimeError }: SketchPreviewProps) {
         </div>
       ) : null}
 
-      <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-[24px] border border-[color:var(--line)] bg-[#f7f3eb]">
-        {code ? (
+      <div className="relative mt-4 min-h-0 flex-1 overflow-hidden rounded-[24px] border border-[color:var(--line)] bg-[#f7f3eb]">
+        {blocked ? (
+          <div className="flex h-full min-h-[480px] flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-2xl">
+              &#x26D4;
+            </div>
+            <p className="text-sm font-semibold text-red-700">Visual Output Blocked</p>
+            <p className="max-w-xs text-sm leading-6 text-[color:var(--muted)]">
+              The generated code attempts to render a restricted symbol. Please modify your
+              prompt to focus on abstract or non-symbolic imagery.
+            </p>
+          </div>
+        ) : code ? (
           <iframe
             key={code}
             title="p5.js sketch preview"

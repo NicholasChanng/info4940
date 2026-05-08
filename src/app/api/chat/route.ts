@@ -11,7 +11,8 @@ import {
   repairSketchDraft,
 } from "@/lib/gemini";
 import { chatRequestSchema } from "@/lib/sketch-schema";
-import { validateSketchCode } from "@/lib/sketch-validation";
+import { detectHateSymbolPatterns, validateSketchCode } from "@/lib/sketch-validation";
+import { detectGeometricJailbreak } from "@/lib/jailbreak-detector";
 import type { ChatResponse } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -65,6 +66,16 @@ export async function POST(request: Request) {
     );
   }
 
+  if (detectGeometricJailbreak(trimmedPrompt)) {
+    return NextResponse.json(
+      {
+        error:
+          "This prompt appears to specify geometric shapes directly rather than describing an experience or feeling. Please describe what you're feeling instead.",
+      },
+      { status: 400 },
+    );
+  }
+
   const emotionContext = deriveEmotionContext(recentMessages);
   const userContext = parsedRequest.data.userContext;
 
@@ -99,6 +110,19 @@ export async function POST(request: Request) {
 
     if (!validationResult.ok) {
       throw new Error(validationResult.errors.join("; "));
+    }
+
+    const hateSymbolCheck = detectHateSymbolPatterns(draft.p5Code);
+    if (hateSymbolCheck.blocked) {
+      console.warn("Hate symbol pattern detected in generated code:", hateSymbolCheck.reason);
+      return NextResponse.json(
+        {
+          error:
+            "Visual Output Blocked: The generated code attempts to render a restricted symbol. Please modify your prompt to focus on abstract or non-symbolic imagery.",
+          blocked: true,
+        },
+        { status: 400 },
+      );
     }
 
     const emotionTags = resolveEmotionTags(

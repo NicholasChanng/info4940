@@ -1,4 +1,26 @@
-import type { SketchValidationResult } from "@/lib/types";
+import type { SketchValidationResult, HateSymbolCheckResult } from "@/lib/types";
+
+// Explicit hate symbol references in generated code (comments, variable names, strings).
+// Geometric construction patterns (4-fold rotation + line) are intentionally excluded
+// here because they produce too many false positives on innocent shapes (snowflakes,
+// mandalas, flowers). The input-layer jailbreak detector handles the construction vector.
+const HATE_SYMBOL_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
+  { pattern: /swastika/i, reason: "Code references a prohibited hate symbol." },
+  { pattern: /hakenkreuz/i, reason: "Code references a prohibited hate symbol." },
+  {
+    pattern: /\bss\s*(?:bolt|rune|insignia|symbol)\b/i,
+    reason: "Code references a prohibited hate symbol.",
+  },
+];
+
+export function detectHateSymbolPatterns(code: string): HateSymbolCheckResult {
+  for (const { pattern, reason } of HATE_SYMBOL_PATTERNS) {
+    if (pattern.test(code)) {
+      return { blocked: true, reason };
+    }
+  }
+  return { blocked: false };
+}
 
 const bannedPatterns: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /\beval\s*\(/, reason: "Do not use eval()." },

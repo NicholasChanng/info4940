@@ -40,6 +40,7 @@ export default function HomePage() {
   const [requestError, setRequestError] = useState<string | null>(null);
   const [editedContext, setEditedContext] = useState<UserContext | null>(null);
   const [canvasRuntimeError, setCanvasRuntimeError] = useState<string | null>(null);
+  const [isCanvasBlocked, setIsCanvasBlocked] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(true);
   const [testModeEnabled, setTestModeEnabled] = useState(false);
   const [selectedFixtureId, setSelectedFixtureId] = useState(
@@ -90,6 +91,7 @@ export default function HomePage() {
     setLatestResponse(null);
     setRequestError(null);
     setEditedContext(null);
+    setIsCanvasBlocked(false);
   }
 
   async function handleSubmit(value: string): Promise<boolean> {
@@ -111,6 +113,7 @@ export default function HomePage() {
     setIsLoading(true);
     setRequestError(null);
     setCanvasRuntimeError(null);
+    setIsCanvasBlocked(false);
 
     if (testModeEnabled) {
       const fixture = TEST_FIXTURES.find((f) => f.id === selectedFixtureId);
@@ -163,6 +166,9 @@ export default function HomePage() {
         | ApiErrorResponse;
 
       if (!response.ok) {
+        if ("blocked" in responseBody && responseBody.blocked) {
+          setIsCanvasBlocked(true);
+        }
         throw new Error(
           "error" in responseBody
             ? responseBody.error
@@ -341,6 +347,7 @@ export default function HomePage() {
           />
           <SketchPreview
             code={deferredResponse?.p5Code ?? null}
+            blocked={isCanvasBlocked}
             onRuntimeError={setCanvasRuntimeError}
           />
         </section>

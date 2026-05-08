@@ -26,6 +26,41 @@ function formatTranscript(messages: ChatMessage[]): string {
     .join("\n\n");
 }
 
+const DISABILITY_CONTEXT_KEYWORDS = [
+  "disability", "disabled", "wheelchair", "prosthetic", "prosthesis",
+  "chronic illness", "chronic pain", "chronic fatigue",
+  "deaf", "blind", "visually impaired", "hearing impaired", "hard of hearing",
+  "autism", "autistic", "neurodivergent", "neurodivergence", "adhd",
+  "cerebral palsy", "multiple sclerosis", "parkinson",
+  "epilepsy", "seizure", "amputee", "amputation",
+  "diagnosis", "diagnosed", "accessible", "accessibility",
+  "chronic", "condition", "impairment",
+];
+
+function detectsDisabilityContext(messages: ChatMessage[]): boolean {
+  const latestUserMessage =
+    messages.filter((m) => m.role === "user").at(-1)?.content ?? "";
+  const text = latestUserMessage.toLowerCase();
+  return DISABILITY_CONTEXT_KEYWORDS.some((keyword) => text.includes(keyword));
+}
+
+const CULTURAL_CONTEXT_KEYWORDS = [
+  "indigenous", "native american", "first nations", "aboriginal",
+  "mexican", "latino", "latina", "latinx", "hispanic",
+  "chinese", "japanese", "korean", "vietnamese", "thai", "indian",
+  "african", "caribbean",
+  "arabic", "middle eastern", "muslim", "jewish", "sikh",
+  "ceremony", "ritual", "tradition", "heritage", "cultural", "ancestral",
+  "tribe", "tribal", "ethnic", "diaspora",
+];
+
+function detectsCulturalContext(messages: ChatMessage[]): boolean {
+  const latestUserMessage =
+    messages.filter((m) => m.role === "user").at(-1)?.content ?? "";
+  const text = latestUserMessage.toLowerCase();
+  return CULTURAL_CONTEXT_KEYWORDS.some((keyword) => text.includes(keyword));
+}
+
 function formatPaletteHints(palette: PaletteEntry[]): string {
   if (palette.length === 0) {
     return "- No direct keyword matches were found. Infer a gentle palette from the user description.";
@@ -82,10 +117,20 @@ export function buildSketchPrompt(input: PromptInput): string {
         ].join("\n")
       : "";
 
+  const culturalContextNote = detectsCulturalContext(input.messages)
+    ? "Cultural sensitivity: The user's prompt references a cultural context. Represent this through abstract emotional visuals — rhythm, warmth, motion, spatial relationships, color weight — NOT through literal cultural objects, clothing, or stereotypic symbols. The sketch must feel emotionally resonant without relying on reductive cultural markers."
+    : "";
+
+  const disabilityContextNote = detectsDisabilityContext(input.messages)
+    ? "Disability sensitivity: The user's prompt references disability, chronic illness, neurodivergence, or accessibility. Do NOT default to dark colors, shattered shapes, or tragedy-coded imagery. The emotional tone must be driven by what the user explicitly expresses — which may be resilience, frustration, joy, pride, or complexity. Only use somber or heavy visuals if the user's own words describe grief or exhaustion."
+    : "";
+
   return [
     "Help the user express their life experience as a complete p5.js sketch.",
     "Keep the explanation concise and beginner-friendly.",
     "Return JSON only that matches the provided response schema.",
+    ...(culturalContextNote ? [culturalContextNote] : []),
+    ...(disabilityContextNote ? [disabilityContextNote] : []),
     "Explanation must be 2 to 4 sentences.",
     "visualMetaphors must contain 2 to 4 short phrases.",
     "emotionTags must contain 1 to 6 lower-case emotion phrases.",
