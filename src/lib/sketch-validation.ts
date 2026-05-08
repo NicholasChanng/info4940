@@ -1,4 +1,4 @@
-import type { SketchValidationResult, HateSymbolCheckResult } from "@/lib/types";
+import type { SketchValidationResult, HateSymbolCheckResult, SecuritySinkResult } from "@/lib/types";
 
 // Explicit hate symbol references in generated code (comments, variable names, strings).
 // Geometric construction patterns (4-fold rotation + line) are intentionally excluded
@@ -15,6 +15,54 @@ const HATE_SYMBOL_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
 
 export function detectHateSymbolPatterns(code: string): HateSymbolCheckResult {
   for (const { pattern, reason } of HATE_SYMBOL_PATTERNS) {
+    if (pattern.test(code)) {
+      return { blocked: true, reason };
+    }
+  }
+  return { blocked: false };
+}
+
+// XSS and data-exfiltration sinks that must never appear in generated p5.js code.
+// These are checked before structural validation and trigger an immediate hard block
+// with no repair attempt — re-running the LLM on poisoned code risks producing
+// obfuscated variants that slip through.
+const SECURITY_SINK_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
+  {
+    pattern: /document\.cookie/i,
+    reason: "document.cookie access detected — potential session token theft.",
+  },
+  {
+    pattern: /navigator\.sendBeacon\s*\(/i,
+    reason: "navigator.sendBeacon detected — potential data exfiltration.",
+  },
+  {
+    pattern: /\bWebSocket\s*\(/i,
+    reason: "WebSocket detected — potential unauthorized communication channel.",
+  },
+  {
+    pattern: /\bEventSource\s*\(/i,
+    reason: "EventSource detected — potential unauthorized communication channel.",
+  },
+  {
+    pattern: /navigator\.credentials/i,
+    reason: "navigator.credentials detected — potential credential access.",
+  },
+  {
+    pattern: /\.innerHTML\s*=/i,
+    reason: "innerHTML assignment detected — potential DOM injection.",
+  },
+  {
+    pattern: /\.outerHTML\s*=/i,
+    reason: "outerHTML assignment detected — potential DOM injection.",
+  },
+  {
+    pattern: /insertAdjacentHTML\s*\(/i,
+    reason: "insertAdjacentHTML detected — potential DOM injection.",
+  },
+];
+
+export function detectSecuritySinks(code: string): SecuritySinkResult {
+  for (const { pattern, reason } of SECURITY_SINK_PATTERNS) {
     if (pattern.test(code)) {
       return { blocked: true, reason };
     }

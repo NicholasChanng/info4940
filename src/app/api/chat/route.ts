@@ -11,7 +11,7 @@ import {
   repairSketchDraft,
 } from "@/lib/gemini";
 import { chatRequestSchema } from "@/lib/sketch-schema";
-import { detectHateSymbolPatterns, validateSketchCode } from "@/lib/sketch-validation";
+import { detectHateSymbolPatterns, detectSecuritySinks, validateSketchCode } from "@/lib/sketch-validation";
 import { detectGeometricJailbreak } from "@/lib/jailbreak-detector";
 import { detectVulnerabilitySignals } from "@/lib/vulnerability-detector";
 import type { ChatResponse } from "@/lib/types";
@@ -91,6 +91,22 @@ export async function POST(request: Request) {
       userCorrectedEmotionTags: userContext?.emotionTags,
       userCorrectedVisualMetaphors: userContext?.visualMetaphors,
     });
+
+    // Security gate: runs before structural validation and never triggers a repair pass.
+    // Poisoned code should not be re-submitted to the LLM — obfuscated variants
+    // could slip through a repair attempt.
+    const securitySinkCheck = detectSecuritySinks(draft.p5Code);
+    if (securitySinkCheck.blocked) {
+      console.warn("Security sink detected in generated code:", securitySinkCheck.reason);
+      return NextResponse.json(
+        {
+          error:
+            "Script Execution Halted: Unauthorized system calls detected in the generated code. The sketch has been blocked for security.",
+          blocked: true,
+        },
+        { status: 400 },
+      );
+    }
 
     let validationResult = validateSketchCode(draft.p5Code);
     let repairApplied = false;

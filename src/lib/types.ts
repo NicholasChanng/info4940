@@ -48,6 +48,11 @@ export interface HateSymbolCheckResult {
   reason?: string;
 }
 
+export interface SecuritySinkResult {
+  blocked: boolean;
+  reason?: string;
+}
+
 export interface UIChatMessage extends ChatMessage {
   assistantPayload?: ChatResponse;
 }
