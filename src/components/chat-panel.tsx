@@ -140,6 +140,9 @@ export function ChatPanel({
   const [localError, setLocalError] = useState<string | null>(null);
   const [interventionMessage, setInterventionMessage] = useState<string | null>(null);
   const [loadingStageIndex, setLoadingStageIndex] = useState(0);
+  const [expansionOptions, setExpansionOptions] = useState<string[] | null>(null);
+  const [expansionLoading, setExpansionLoading] = useState(false);
+  const [pendingShortPrompt, setPendingShortPrompt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading) {
@@ -165,6 +168,15 @@ export function ChatPanel({
     }
   }
 
+  async function proceedWithPrompt(prompt: string) {
+    setExpansionOptions(null);
+    setPendingShortPrompt(null);
+    const succeeded = await onSubmit(prompt);
+    if (succeeded) {
+      setDraft("");
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -186,14 +198,39 @@ export function ChatPanel({
       return;
     }
 
+    // Short-prompt detection: offer LLM expansions before generating
+    const wordCount = trimmedDraft.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 8 && messages.length === 0 && expansionOptions === null && !expansionLoading) {
+      setPendingShortPrompt(trimmedDraft);
+      setExpansionLoading(true);
+      setLocalError(null);
+      setInterventionMessage(null);
+
+      try {
+        const response = await fetch("/api/expand-prompt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: trimmedDraft }),
+        });
+
+        if (response.ok) {
+          const data = (await response.json()) as { options: string[] };
+          setExpansionOptions(data.options);
+        } else {
+          // Expansion failed — proceed silently with the original
+          await proceedWithPrompt(trimmedDraft);
+        }
+      } catch {
+        await proceedWithPrompt(trimmedDraft);
+      } finally {
+        setExpansionLoading(false);
+      }
+      return;
+    }
+
     setLocalError(null);
     setInterventionMessage(null);
-    const submittedDraft = trimmedDraft;
-    const succeeded = await onSubmit(submittedDraft);
-
-    if (succeeded) {
-      setDraft("");
-    }
+    await proceedWithPrompt(trimmedDraft);
   }
 
   const visibleError = localError ?? error ?? interventionMessage;
@@ -323,6 +360,53 @@ export function ChatPanel({
                 </>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Short-prompt expansion: loading state */}
+        {expansionLoading && (
+          <div className="rounded-[24px] border border-[color:var(--line)] bg-white/85 px-4 py-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+              AI Coach
+            </p>
+            <div className="flex items-center gap-3">
+              <svg className="h-4 w-4 shrink-0 animate-spin text-[color:var(--muted)]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <p className="text-sm text-[color:var(--muted)]">Finding ways to express your idea…</p>
+            </div>
+          </div>
+        )}
+
+        {/* Short-prompt expansion: option picker */}
+        {expansionOptions && pendingShortPrompt && (
+          <div className="rounded-[24px] border border-[color:var(--accent)] bg-[color:var(--accent-soft)] px-4 py-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+              AI Coach
+            </p>
+            <p className="mb-3 text-sm leading-6 text-[color:var(--ink)]">
+              Here are three ways to describe what you shared. Pick the one that feels right, or use your original words.
+            </p>
+            <div className="space-y-2">
+              {expansionOptions.map((option, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => proceedWithPrompt(option)}
+                  className="w-full rounded-[16px] border border-[color:var(--line)] bg-white/85 px-4 py-3 text-left text-sm leading-6 text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:bg-white"
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => proceedWithPrompt(pendingShortPrompt)}
+              className="mt-3 text-xs text-[color:var(--muted)] underline underline-offset-2 transition hover:text-[color:var(--ink)]"
+            >
+              Use my original: &ldquo;{pendingShortPrompt}&rdquo;
+            </button>
           </div>
         )}
 
@@ -474,6 +558,25 @@ export function ChatPanel({
                       </div>
                     )}
 
+                    {payload.vulnerabilityFlagged && (
+                      <div className="rounded-[16px] border border-blue-200 bg-blue-50 px-4 py-3">
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-600">
+                          A note
+                        </p>
+                        <p className="text-sm leading-6 text-[color:var(--ink)]">
+                          What you shared sounds difficult to hold. This tool is for creative expression — it&apos;s not a substitute for human support. If you&apos;re going through a hard time, talking to someone can help.
+                        </p>
+                        <a
+                          href="https://988lifeline.org"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-block text-xs font-medium text-blue-700 underline underline-offset-2 transition hover:text-blue-900"
+                        >
+                          988 Suicide &amp; Crisis Lifeline — call or text 988, available 24/7
+                        </a>
+                      </div>
+                    )}
+
                     {payload.repairApplied ? (
                       <p className="text-xs font-medium text-[color:var(--warning)]">
                         The sketch needed one automatic repair pass before rendering.
@@ -536,7 +639,7 @@ export function ChatPanel({
         </div>
         <button
           type="submit"
-          disabled={loading || !trimmedDraft || isOverLimit}
+          disabled={loading || !trimmedDraft || isOverLimit || expansionLoading || expansionOptions !== null}
           className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--ink)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-45"
         >
           {loading && (

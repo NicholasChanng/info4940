@@ -57,6 +57,9 @@ function draw() {
       repairApplied: false,
       followUpQuestion:
         "What moment during that experience felt the most alive — was there a specific sound, color, or sensation that stood out?",
+      interpretationNote:
+        "I read this as expansive joy rather than quiet contentment — tell me if you meant something calmer.",
+      vulnerabilityFlagged: false,
     },
   },
   {
@@ -98,6 +101,9 @@ function draw() {
       repairApplied: false,
       followUpQuestion:
         "Was there something in the room that seemed to move differently from everything else, or did everything feel equally distant?",
+      interpretationNote:
+        "I focused on geometric shapes here, but this may have missed the emotional core — tell me what the experience actually felt like.",
+      vulnerabilityFlagged: false,
     },
   },
   {
@@ -128,6 +134,9 @@ function draw() {
       repairApplied: false,
       followUpQuestion:
         "When that calmness finally arrived, did it feel more like slowing down inside, or like the world outside suddenly going quiet?",
+      interpretationNote:
+        "I read this as a spreading sense of calm — tell me if the feeling was more sudden or held something underneath it.",
+      vulnerabilityFlagged: false,
     },
   },
   {

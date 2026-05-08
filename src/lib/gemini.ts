@@ -195,6 +195,38 @@ async function requestModelOutput(prompt: string, temperature: number): Promise<
   }
 }
 
+export async function expandPromptOptions(userPrompt: string): Promise<string[]> {
+  const model = getPrimaryModel();
+
+  const response = await getClient().models.generateContent({
+    model,
+    contents: `The user wrote this brief description of a personal experience: "${userPrompt}"
+
+Generate exactly 3 expanded versions. Each should be 1–2 complete sentences that:
+- Preserve the exact emotional intent of the original
+- Add evocative sensory or contextual detail that helps a sketch generator understand the feeling
+- Stay personal and grounded — do not invent facts the user did not suggest
+
+Return only a JSON array of 3 strings. No keys, no explanation.`,
+    config: {
+      systemInstruction:
+        "You help users articulate personal experiences for creative visual art generation. Keep expansions emotionally authentic, concise, and free of interpretation that the user did not express.",
+      candidateCount: 1,
+      temperature: 0.7,
+      responseMimeType: "application/json",
+    },
+  });
+
+  const text = extractResponseText(response);
+  const parsed = parseJsonResponse(text);
+
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error("Expansion returned an unexpected format.");
+  }
+
+  return parsed.slice(0, 3).map(String);
+}
+
 export async function generateSketchDraft(input: BaseGeminiInput): Promise<ModelSketchResponse> {
   return requestModelOutput(buildSketchPrompt(input), 0.8);
 }

@@ -20,6 +20,7 @@ export interface ChatResponse {
   repairApplied: boolean;
   followUpQuestion: string;
   interpretationNote: string;
+  vulnerabilityFlagged: boolean;
 }
 
 export interface ModelSketchResponse {

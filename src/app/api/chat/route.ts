@@ -13,6 +13,7 @@ import {
 import { chatRequestSchema } from "@/lib/sketch-schema";
 import { detectHateSymbolPatterns, validateSketchCode } from "@/lib/sketch-validation";
 import { detectGeometricJailbreak } from "@/lib/jailbreak-detector";
+import { detectVulnerabilitySignals } from "@/lib/vulnerability-detector";
 import type { ChatResponse } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -75,6 +76,8 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  const vulnerabilityFlagged = detectVulnerabilitySignals(trimmedPrompt);
 
   const emotionContext = deriveEmotionContext(recentMessages);
   const userContext = parsedRequest.data.userContext;
@@ -139,6 +142,7 @@ export async function POST(request: Request) {
       repairApplied,
       followUpQuestion: draft.followUpQuestion,
       interpretationNote: draft.interpretationNote,
+      vulnerabilityFlagged,
     };
 
     return NextResponse.json(responseBody);
